@@ -22,6 +22,9 @@ public class ReportOptions
     /// <summary>Selected format code from GUSR.</summary>
     public string Format { get; set; } = string.Empty;
 
+    /// <summary>Selected General Ledger code from GLCD.LEDGCODE — defaults to the first ledger.</summary>
+    public string LedgCode { get; set; } = string.Empty;
+
     /// <summary>Selected budget type code from GBTY.</summary>
     public string Budget { get; set; } = string.Empty;
 

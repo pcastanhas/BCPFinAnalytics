@@ -220,4 +220,36 @@ public class LookupRepository : ILookupRepository
             throw;
         }
     }
+
+    /// <summary>
+    /// General Ledger dropdown.
+    /// SOURCE: GLCD table — one row per ledger, keyed by LEDGCODE.
+    /// </summary>
+    public async Task<IEnumerable<GLDto>> GetGLsAsync(string dbKey)
+    {
+        const string sql = """
+            SELECT
+                LEDGCODE                                              AS LedgCode,
+                '(' + RTRIM(LEDGCODE) + ') ' + RTRIM(DESCRPTN)       AS DisplayName
+            FROM GLCD
+            ORDER BY LEDGCODE
+            """;
+
+        try
+        {
+            _logger.LogTrace("LookupRepository.GetGLsAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+
+            await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
+            var result = await conn.QueryAsync<GLDto>(sql);
+
+            _logger.LogDebug("LookupRepository.GetGLsAsync — returned {Count} rows", result.Count());
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "LookupRepository.GetGLsAsync failed — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+            throw;
+        }
+    }
 }

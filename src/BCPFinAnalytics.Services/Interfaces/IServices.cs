@@ -22,6 +22,7 @@ public interface ILookupService
     Task<ServiceResult<IEnumerable<BasisDto>>> GetBasisAsync(string dbKey);
     Task<ServiceResult<IEnumerable<EntityDto>>> GetEntitiesAsync(string dbKey);
     Task<ServiceResult<IEnumerable<ProjectDto>>> GetProjectsAsync(string dbKey);
+    Task<ServiceResult<IEnumerable<GLDto>>> GetGLsAsync(string dbKey);
 }
 
 // ══════════════════════════════════════════════════════════════

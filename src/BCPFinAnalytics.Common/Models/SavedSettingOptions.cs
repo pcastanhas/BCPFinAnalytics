@@ -19,6 +19,7 @@ public class SavedSettingOptions
     public string StartPeriod { get; set; } = string.Empty;
     public string EndPeriod { get; set; } = string.Empty;
     public string Format { get; set; } = string.Empty;
+    public string LedgCode { get; set; } = string.Empty;
     public string Budget { get; set; } = string.Empty;
     public string SFType { get; set; } = string.Empty;
     public bool WholeDollars { get; set; } = false;

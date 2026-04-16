@@ -118,4 +118,20 @@ public class LookupService : ILookupService
                 ErrorCode.DatabaseError);
         }
     }
+
+    public async Task<ServiceResult<IEnumerable<GLDto>>> GetGLsAsync(string dbKey)
+    {
+        try
+        {
+            _logger.LogDebug("LookupService.GetGLsAsync — DbKey={DbKey}", dbKey);
+            var data = await _repo.GetGLsAsync(dbKey);
+            return ServiceResult<IEnumerable<GLDto>>.Success(data);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "LookupService.GetGLsAsync failed — DbKey={DbKey}", dbKey);
+            return ServiceResult<IEnumerable<GLDto>>.FromException(ex,
+                ErrorCode.DatabaseError);
+        }
+    }
 }

@@ -14,4 +14,5 @@ public interface ILookupRepository
     Task<IEnumerable<BasisDto>> GetBasisAsync(string dbKey);
     Task<IEnumerable<EntityDto>> GetEntitiesAsync(string dbKey);
     Task<IEnumerable<ProjectDto>> GetProjectsAsync(string dbKey);
+    Task<IEnumerable<GLDto>> GetGLsAsync(string dbKey);
 }

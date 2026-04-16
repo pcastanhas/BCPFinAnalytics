@@ -37,3 +37,9 @@ public record SavedSettingDto(
     string SettingName,
     string UserId,
     bool IsPublic);
+
+/// <summary>
+/// General Ledger dropdown item.
+/// Sourced from: SELECT LEDGCODE, '('+RTRIM(LEDGCODE)+') '+RTRIM(DESCRPTN) FROM GLCD
+/// </summary>
+public record GLDto(string LedgCode, string DisplayName);
