@@ -64,8 +64,8 @@
                         <MudItem xs="12">
                             <MudSelect T="string"
                                        Label="Report Type"
-                                       @bind-Value="_options.ReportType"
-                                       ValueChanged="OnReportTypeChanged"
+                                       Value="@_options.ReportType"
+                                       ValueChanged="@OnReportTypeChanged"
                                        Variant="Variant.Outlined"
                                        Margin="Margin.Dense"
                                        Required="true"
@@ -163,8 +163,8 @@
                                 Entity / Project Selection
                             </MudText>
                             <MudRadioGroup T="SelectionMode"
-                                           @bind-Value="_options.SelectionMode"
-                                           ValueChanged="OnSelectionModeChanged">
+                                           Value="@_options.SelectionMode"
+                                           ValueChanged="@OnSelectionModeChanged">
                                 <MudRadio T="SelectionMode"
                                           Value="SelectionMode.All"
                                           Color="Color.Primary"
