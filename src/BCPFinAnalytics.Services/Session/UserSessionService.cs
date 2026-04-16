@@ -1,3 +1,4 @@
+using BCPFinAnalytics.Common.Enums;
 using BCPFinAnalytics.Common.Wrappers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;

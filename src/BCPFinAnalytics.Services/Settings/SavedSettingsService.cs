@@ -35,7 +35,7 @@ public class SavedSettingsService : ISavedSettingsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "SavedSettingsService.GetAllForUserAsync failed — DbKey={DbKey}", dbKey);
-            return ServiceResult<IEnumerable<SavedSettingDto>>.FromException(ex, Common.Enums.ErrorCode.DatabaseError);
+            return ServiceResult<IEnumerable<SavedSettingDto>>.FromException(ex, ErrorCode.DatabaseError);
         }
     }
 
@@ -45,18 +45,18 @@ public class SavedSettingsService : ISavedSettingsService
         {
             var setting = await _repo.GetByIdAsync(dbKey, settingId);
             if (setting == null)
-                return ServiceResult<SavedSettingOptions>.Failure($"Setting {settingId} not found.", Common.Enums.ErrorCode.NotFound);
+                return ServiceResult<SavedSettingOptions>.Failure($"Setting {settingId} not found.", ErrorCode.NotFound);
 
             var options = JsonSerializer.Deserialize<SavedSettingOptions>(setting.SettingsJson);
             if (options == null)
-                return ServiceResult<SavedSettingOptions>.Failure("Failed to deserialize saved setting.", Common.Enums.ErrorCode.UnexpectedError);
+                return ServiceResult<SavedSettingOptions>.Failure("Failed to deserialize saved setting.", ErrorCode.UnexpectedError);
 
             return ServiceResult<SavedSettingOptions>.Success(options);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "SavedSettingsService.GetSettingOptionsAsync failed — DbKey={DbKey} SettingId={SettingId}", dbKey, settingId);
-            return ServiceResult<SavedSettingOptions>.FromException(ex, Common.Enums.ErrorCode.DatabaseError);
+            return ServiceResult<SavedSettingOptions>.FromException(ex, ErrorCode.DatabaseError);
         }
     }
 
@@ -81,7 +81,7 @@ public class SavedSettingsService : ISavedSettingsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "SavedSettingsService.SaveAsync failed — DbKey={DbKey}", dbKey);
-            return ServiceResult<int>.FromException(ex, Common.Enums.ErrorCode.DatabaseError);
+            return ServiceResult<int>.FromException(ex, ErrorCode.DatabaseError);
         }
     }
 
@@ -96,7 +96,7 @@ public class SavedSettingsService : ISavedSettingsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "SavedSettingsService.DeleteAsync failed — DbKey={DbKey} SettingId={SettingId}", dbKey, settingId);
-            return ServiceResult<bool>.FromException(ex, Common.Enums.ErrorCode.DatabaseError);
+            return ServiceResult<bool>.FromException(ex, ErrorCode.DatabaseError);
         }
     }
 }

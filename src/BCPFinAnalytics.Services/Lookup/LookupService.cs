@@ -35,7 +35,7 @@ public class LookupService : ILookupService
         {
             _logger.LogError(ex, "LookupService.GetFormatsAsync failed — DbKey={DbKey}", dbKey);
             return ServiceResult<IEnumerable<FormatDto>>.FromException(ex,
-                Common.Enums.ErrorCode.DatabaseError);
+                ErrorCode.DatabaseError);
         }
     }
 
@@ -51,7 +51,7 @@ public class LookupService : ILookupService
         {
             _logger.LogError(ex, "LookupService.GetBudgetsAsync failed — DbKey={DbKey}", dbKey);
             return ServiceResult<IEnumerable<BudgetDto>>.FromException(ex,
-                Common.Enums.ErrorCode.DatabaseError);
+                ErrorCode.DatabaseError);
         }
     }
 
@@ -67,7 +67,7 @@ public class LookupService : ILookupService
         {
             _logger.LogError(ex, "LookupService.GetSFTypesAsync failed — DbKey={DbKey}", dbKey);
             return ServiceResult<IEnumerable<SFTypeDto>>.FromException(ex,
-                Common.Enums.ErrorCode.DatabaseError);
+                ErrorCode.DatabaseError);
         }
     }
 
@@ -83,7 +83,7 @@ public class LookupService : ILookupService
         {
             _logger.LogError(ex, "LookupService.GetBasisAsync failed — DbKey={DbKey}", dbKey);
             return ServiceResult<IEnumerable<BasisDto>>.FromException(ex,
-                Common.Enums.ErrorCode.DatabaseError);
+                ErrorCode.DatabaseError);
         }
     }
 
@@ -99,7 +99,7 @@ public class LookupService : ILookupService
         {
             _logger.LogError(ex, "LookupService.GetEntitiesAsync failed — DbKey={DbKey}", dbKey);
             return ServiceResult<IEnumerable<EntityDto>>.FromException(ex,
-                Common.Enums.ErrorCode.DatabaseError);
+                ErrorCode.DatabaseError);
         }
     }
 
@@ -115,7 +115,7 @@ public class LookupService : ILookupService
         {
             _logger.LogError(ex, "LookupService.GetProjectsAsync failed — DbKey={DbKey}", dbKey);
             return ServiceResult<IEnumerable<ProjectDto>>.FromException(ex,
-                Common.Enums.ErrorCode.DatabaseError);
+                ErrorCode.DatabaseError);
         }
     }
 }
