@@ -1,5 +1,4 @@
 @using BCPFinAnalytics.Common.DTOs
-@using BCPFinAnalytics.Common.Enums
 @using BCPFinAnalytics.Common.Models
 @using BCPFinAnalytics.Services.Interfaces
 @using BCPFinAnalytics.Services.Session
@@ -161,29 +160,29 @@
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
                                 Entity / Project Selection
                             </MudText>
-                            <MudRadioGroup T="AppSelectionMode"
+                            <MudRadioGroup T="BCPFinAnalytics.Common.Enums.SelectionMode"
                                            Value="@_options.SelectionMode"
                                            ValueChanged="@OnSelectionModeChanged">
-                                <MudRadio T="AppSelectionMode"
-                                          Value="AppSelectionMode.All"
+                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.All"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     All
                                 </MudRadio>
-                                <MudRadio T="AppSelectionMode"
-                                          Value="AppSelectionMode.Include"
+                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Include"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     Include
                                 </MudRadio>
-                                <MudRadio T="AppSelectionMode"
-                                          Value="AppSelectionMode.Exclude"
+                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Exclude"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     Exclude
                                 </MudRadio>
-                                <MudRadio T="AppSelectionMode"
-                                          Value="AppSelectionMode.Range"
+                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Range"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     Range
@@ -198,7 +197,7 @@
                                                  SelectedIdsChanged="ids => _options.SelectedIds = ids"
                                                  Entities="@_entities"
                                                  Projects="@_projects"
-                                                 Disabled="@(!_config.EntitySelectionEnabled || _options.SelectionMode == AppSelectionMode.All)" />
+                                                 Disabled="@(!_config.EntitySelectionEnabled || _options.SelectionMode == BCPFinAnalytics.Common.Enums.SelectionMode.All)" />
                         </MudItem>
 
                         <!-- Basis multi-select -->
@@ -352,7 +351,7 @@
         _options.SelectedIds = saved.SelectedIds;
         _options.Basis       = saved.Basis;
 
-        if (Enum.TryParse<AppSelectionMode>(saved.SelectionMode, out var mode))
+        if (Enum.TryParse<BCPFinAnalytics.Common.Enums.SelectionMode>(saved.SelectionMode, out var mode))
             _options.SelectionMode = mode;
 
         // Re-apply options config for the restored report type
@@ -366,10 +365,10 @@
         StateHasChanged();
     }
 
-    private void OnSelectionModeChanged(AppSelectionMode mode)
+    private void OnSelectionModeChanged(BCPFinAnalytics.Common.Enums.SelectionMode mode)
     {
         _options.SelectionMode = mode;
-        if (mode == AppSelectionMode.All)
+        if (mode == BCPFinAnalytics.Common.Enums.SelectionMode.All)
             _options.SelectedIds = new();
     }
 

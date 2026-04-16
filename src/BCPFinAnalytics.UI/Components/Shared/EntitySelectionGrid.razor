@@ -1,6 +1,4 @@
 @using BCPFinAnalytics.Common.DTOs
-@using BCPFinAnalytics.Common.Enums
-@using AppSelectionMode = BCPFinAnalytics.Common.Enums.SelectionMode
 
 @*
     EntitySelectionGrid — searchable entity/project selection component.
@@ -16,7 +14,7 @@
 
 <div class="entity-grid-container">
 
-    @if (Mode == AppSelectionMode.All)
+    @if (Mode == BCPFinAnalytics.Common.Enums.SelectionMode.All)
     {
         <MudAlert Severity="Severity.Info" Dense="true" Class="mb-0">
             All entities/projects will be included.
@@ -78,7 +76,7 @@
 
         <!-- Selection summary and validation -->
         <div class="entity-selection-summary mt-1">
-            @if (Mode == AppSelectionMode.Range)
+            @if (Mode == BCPFinAnalytics.Common.Enums.SelectionMode.Range)
             {
                 @if (SelectedIds.Count == 0)
                 {
@@ -114,7 +112,7 @@
     /// Named 'Mode' rather than 'SelectionMode' to avoid conflict
     /// between the parameter name and the SelectionMode type in Blazor markup.
     /// </summary>
-    [Parameter] public AppSelectionMode Mode { get; set; } = AppSelectionMode.All;
+    [Parameter] public BCPFinAnalytics.Common.Enums.SelectionMode Mode { get; set; } = BCPFinAnalytics.Common.Enums.SelectionMode.All;
     [Parameter] public List<string> SelectedIds { get; set; } = new();
     [Parameter] public EventCallback<List<string>> SelectedIdsChanged { get; set; }
     [Parameter] public List<EntityDto> Entities { get; set; } = new();
@@ -135,11 +133,11 @@
 
     private async Task ToggleItem(string id)
     {
-        if (Disabled || Mode == AppSelectionMode.All) return;
+        if (Disabled || Mode == BCPFinAnalytics.Common.Enums.SelectionMode.All) return;
 
         var current = new List<string>(SelectedIds);
 
-        if (Mode == AppSelectionMode.Range)
+        if (Mode == BCPFinAnalytics.Common.Enums.SelectionMode.Range)
         {
             if (current.Contains(id))
             {
@@ -164,10 +162,10 @@
     /// <summary>Validates selection based on current mode.</summary>
     public bool IsValid => Mode switch
     {
-        AppSelectionMode.All     => true,
-        AppSelectionMode.Include => SelectedIds.Any(),
-        AppSelectionMode.Exclude => SelectedIds.Any(),
-        AppSelectionMode.Range   => SelectedIds.Count == 2,
+        BCPFinAnalytics.Common.Enums.SelectionMode.All     => true,
+        BCPFinAnalytics.Common.Enums.SelectionMode.Include => SelectedIds.Any(),
+        BCPFinAnalytics.Common.Enums.SelectionMode.Exclude => SelectedIds.Any(),
+        BCPFinAnalytics.Common.Enums.SelectionMode.Range   => SelectedIds.Count == 2,
         _                        => false
     };
 }
