@@ -1,0 +1,45 @@
+@inherits LayoutComponentBase
+@inject IOptions<AppSettings> AppSettingsOptions
+@using BCPFinAnalytics.Services
+@using Microsoft.Extensions.Options
+@using MudBlazor
+
+<MudThemeProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+
+    <!-- ═══════════════════════════════════════════════════
+         APP BANNER — always visible, shows name + version
+         ═══════════════════════════════════════════════════ -->
+    <MudAppBar Elevation="2" Color="Color.Primary" Fixed="true">
+        <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" />
+        <MudText Typo="Typo.h6" Style="font-weight:600; letter-spacing:0.05em;">
+            @AppSettingsOptions.Value.AppName
+        </MudText>
+        <MudText Typo="Typo.caption" Class="ml-2 mt-1" Style="opacity:0.75;">
+            v@AppSettingsOptions.Value.AppVersion
+        </MudText>
+        <MudSpacer />
+        <SessionBadge />
+    </MudAppBar>
+
+    <!-- ═══════════════════════════════════════════════════
+         MAIN CONTENT AREA
+         ═══════════════════════════════════════════════════ -->
+    <MudMainContent Class="mt-16 pa-4">
+        <ErrorBoundary>
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent Context="ex">
+                <MudAlert Severity="Severity.Error" Class="ma-4">
+                    <MudText Typo="Typo.subtitle1">An unexpected error occurred.</MudText>
+                    <MudText Typo="Typo.body2">@ex.Message</MudText>
+                </MudAlert>
+            </ErrorContent>
+        </ErrorBoundary>
+    </MudMainContent>
+
+</MudLayout>

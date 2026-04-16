@@ -1,0 +1,36 @@
+@using BCPFinAnalytics.Services.Session
+@using MudBlazor
+@inject UserSessionService Session
+
+@* 
+    SessionBadge — displayed in the top-right of the app banner.
+    Shows the active database key and current user so operators
+    can confirm at a glance which environment/user is active.
+*@
+
+@if (Session.IsValid)
+{
+    <MudChip T="string"
+             Color="Color.Dark"
+             Size="Size.Small"
+             Icon="@Icons.Material.Filled.Storage"
+             Class="mr-1">
+        @Session.DbKey
+    </MudChip>
+    <MudChip T="string"
+             Color="Color.Dark"
+             Size="Size.Small"
+             Icon="@Icons.Material.Filled.Person"
+             Class="mr-2">
+        @Session.UserId
+    </MudChip>
+}
+else
+{
+    <MudChip T="string"
+             Color="Color.Error"
+             Size="Size.Small"
+             Icon="@Icons.Material.Filled.Warning">
+        Invalid Session
+    </MudChip>
+}

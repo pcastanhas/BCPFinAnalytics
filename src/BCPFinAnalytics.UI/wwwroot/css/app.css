@@ -1,0 +1,155 @@
+/* ═══════════════════════════════════════════════════════
+   BCPFinAnalytics — Application Styles
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Base ─────────────────────────────────────────────── */
+html, body {
+    font-family: 'Roboto', sans-serif;
+    font-size: 14px;
+    background-color: #f5f5f5;
+}
+
+/* ── Report Display Table ─────────────────────────────── */
+.report-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    background-color: #ffffff;
+}
+
+.report-table th {
+    background-color: #1565C0;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 8px 12px;
+    text-align: right;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.report-table th:first-child,
+.report-table th:nth-child(2) {
+    text-align: left;
+}
+
+.report-table td {
+    padding: 4px 12px;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+/* ── Row Types ────────────────────────────────────────── */
+
+/* Section Header — e.g. "REVENUE" */
+.row-section-header td {
+    font-weight: 700;
+    font-size: 13px;
+    padding-top: 14px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #1565C0;
+    color: #1565C0;
+}
+
+/* Sub Header — e.g. "RESIDENTIAL RENT INCOME" */
+.row-sub-header td {
+    font-weight: 700;
+    font-size: 13px;
+    padding-top: 8px;
+    color: #333333;
+}
+
+/* Detail row — individual account lines */
+.row-detail td {
+    font-weight: 400;
+    color: #212121;
+}
+
+.row-detail:hover {
+    background-color: #f0f4ff;
+}
+
+/* Total row — e.g. "TOTAL RESIDENTIAL RENT INCOME" */
+.row-total td {
+    font-weight: 700;
+    border-top: 1px solid #555555;
+    padding-top: 4px;
+}
+
+/* Grand Total row */
+.row-grand-total td {
+    font-weight: 700;
+    border-top: 2px solid #1565C0;
+    border-bottom: 2px solid #1565C0;
+    background-color: #e3f2fd;
+    font-size: 13px;
+}
+
+/* ── Numeric columns ──────────────────────────────────── */
+.report-table td.numeric {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ── Variance color coding ────────────────────────────── */
+.variance-favorable {
+    background-color: #43A047;
+    color: #ffffff;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-weight: 600;
+}
+
+.variance-unfavorable {
+    background-color: #E53935;
+    color: #ffffff;
+    border-radius: 3px;
+    padding: 2px 6px;
+    font-weight: 600;
+}
+
+/* ── Report container ─────────────────────────────────── */
+.report-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 280px);
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+    background-color: #ffffff;
+}
+
+/* ── Options panel ────────────────────────────────────── */
+.options-panel {
+    margin-bottom: 16px;
+}
+
+/* ── Period input ─────────────────────────────────────── */
+.period-input {
+    max-width: 140px;
+}
+
+/* ── Entity grid ──────────────────────────────────────── */
+.entity-grid {
+    height: 240px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+/* ── Basis list ───────────────────────────────────────── */
+.basis-list {
+    height: 180px;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+/* ── Button row ───────────────────────────────────────── */
+.button-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 12px 0 4px 0;
+    flex-wrap: wrap;
+}
