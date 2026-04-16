@@ -1,0 +1,122 @@
+@using BCPFinAnalytics.Common.Models
+@using BCPFinAnalytics.Services.Interfaces
+@inject ISavedSettingsService SavedSettingsService
+@inject BCPFinAnalytics.Services.Session.UserSessionService UserSession
+@inject ISnackbar Snackbar
+@inject ILogger<SaveSettingsModal> Logger
+
+@*
+    SaveSettingsModal — MudDialog for saving current report options.
+    User provides a name and chooses public/private visibility.
+*@
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Save" Class="mr-2" />
+            Save Report Settings
+        </MudText>
+    </TitleContent>
+
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="_settingName"
+                          Label="Setting Name"
+                          Placeholder="e.g. Monthly P&L - All Entities"
+                          Variant="Variant.Outlined"
+                          MaxLength="100"
+                          Immediate="true"
+                          Error="@(_submitted && string.IsNullOrWhiteSpace(_settingName))"
+                          ErrorText="Setting name is required." />
+
+            <MudCheckBox @bind-Value="_isPublic"
+                         Color="Color.Primary"
+                         Label="Make this setting available to all users" />
+
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @if (_isPublic)
+                {
+                    <span>All users will see this setting in their Saved Settings dropdown.</span>
+                }
+                else
+                {
+                    <span>Only you will see this setting.</span>
+                }
+            </MudText>
+        </MudStack>
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Cancel"
+                   Variant="Variant.Text"
+                   Disabled="@_saving">
+            Cancel
+        </MudButton>
+        <MudButton OnClick="Save"
+                   Color="Color.Primary"
+                   Variant="Variant.Filled"
+                   Disabled="@_saving"
+                   StartIcon="@Icons.Material.Filled.Save">
+            @if (_saving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                <span>Saving...</span>
+            }
+            else
+            {
+                <span>Save</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public SavedSettingOptions Options { get; set; } = new();
+
+    private string _settingName = string.Empty;
+    private bool _isPublic = false;
+    private bool _saving = false;
+    private bool _submitted = false;
+
+    private async Task Save()
+    {
+        _submitted = true;
+
+        if (string.IsNullOrWhiteSpace(_settingName))
+            return;
+
+        _saving = true;
+
+        try
+        {
+            Logger.LogInformation(
+                "SaveSettingsModal — saving setting '{Name}' IsPublic={IsPublic} UserId={UserId}",
+                _settingName, _isPublic, UserSession.UserId);
+
+            var result = await SavedSettingsService.SaveAsync(
+                UserSession.DbKey,
+                UserSession.UserId,
+                _settingName.Trim(),
+                _isPublic,
+                Options);
+
+            if (result.IsSuccess)
+            {
+                Snackbar.Add($"Settings saved as '{_settingName}'.", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result.Data));
+            }
+            else
+            {
+                Logger.LogError("SaveSettingsModal — save failed: {Error}", result.ErrorMessage);
+                Snackbar.Add($"Failed to save settings: {result.ErrorMessage}", Severity.Error);
+            }
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

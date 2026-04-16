@@ -1,0 +1,90 @@
+@using System.Text.RegularExpressions
+
+@*
+    PeriodInput — MM/YYYY period input with format validation.
+    Emits the value only when it is a valid MM/YYYY string.
+    Used for Start Period and End Period on the options panel.
+*@
+
+<MudTextField @bind-Value="_displayValue"
+              Label="@Label"
+              Placeholder="MM/YYYY"
+              Disabled="@Disabled"
+              Error="@(!string.IsNullOrEmpty(_errorText))"
+              ErrorText="@_errorText"
+              Immediate="true"
+              MaxLength="7"
+              Class="period-input"
+              Variant="Variant.Outlined"
+              Margin="Margin.Dense"
+              OnBlur="OnBlur" />
+
+@code {
+    [Parameter] public string Label { get; set; } = "Period";
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public string? MinPeriod { get; set; }  // For end period >= start period validation
+
+    private string _displayValue = string.Empty;
+    private string _errorText = string.Empty;
+
+    private static readonly Regex PeriodRegex = new(@"^(0[1-9]|1[0-2])\/\d{4}$");
+
+    protected override void OnParametersSet()
+    {
+        if (_displayValue != Value)
+            _displayValue = Value;
+    }
+
+    private async Task OnBlur()
+    {
+        _errorText = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(_displayValue))
+        {
+            await ValueChanged.InvokeAsync(string.Empty);
+            return;
+        }
+
+        // Auto-format: if user typed 6 digits without slash e.g. "012025" → "01/2025"
+        if (_displayValue.Length == 6 && !_displayValue.Contains('/'))
+        {
+            _displayValue = _displayValue.Insert(2, "/");
+        }
+
+        if (!PeriodRegex.IsMatch(_displayValue))
+        {
+            _errorText = "Enter a valid period (MM/YYYY)";
+            return;
+        }
+
+        // Validate against MinPeriod if provided
+        if (!string.IsNullOrEmpty(MinPeriod) && PeriodRegex.IsMatch(MinPeriod))
+        {
+            if (ComparePeriods(_displayValue, MinPeriod) < 0)
+            {
+                _errorText = $"Must be on or after {MinPeriod}";
+                return;
+            }
+        }
+
+        await ValueChanged.InvokeAsync(_displayValue);
+    }
+
+    /// <summary>
+    /// Compares two MM/YYYY period strings.
+    /// Returns negative if a &lt; b, zero if equal, positive if a &gt; b.
+    /// </summary>
+    public static int ComparePeriods(string a, string b)
+    {
+        var partsA = a.Split('/');
+        var partsB = b.Split('/');
+        var yearA = int.Parse(partsA[1]);
+        var yearB = int.Parse(partsB[1]);
+        if (yearA != yearB) return yearA.CompareTo(yearB);
+        return int.Parse(partsA[0]).CompareTo(int.Parse(partsB[0]));
+    }
+
+    public bool IsValid => PeriodRegex.IsMatch(_displayValue) && string.IsNullOrEmpty(_errorText);
+}

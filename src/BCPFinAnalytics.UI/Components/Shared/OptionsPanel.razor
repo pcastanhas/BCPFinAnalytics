@@ -1,0 +1,424 @@
+@using BCPFinAnalytics.Common.DTOs
+@using BCPFinAnalytics.Common.Enums
+@using BCPFinAnalytics.Common.Models
+@using BCPFinAnalytics.Services.Interfaces
+@using BCPFinAnalytics.Services.Session
+@using Microsoft.Extensions.Options
+
+@inject ILookupService LookupService
+@inject ISavedSettingsService SavedSettingsService
+@inject IReportStrategyResolver StrategyResolver
+@inject UserSessionService UserSession
+@inject ISnackbar Snackbar
+@inject ILogger<OptionsPanel> Logger
+@inject IOptions<BCPFinAnalytics.Services.AppSettings> AppSettings
+
+@*
+    OptionsPanel — collapsible report options panel.
+    Loads all dropdown data on init.
+    Reacts to report type selection by reading ReportOptionsConfig
+    from the resolved strategy and enabling/disabling controls.
+    Emits ReportOptions when the user clicks Display/Excel/PDF.
+*@
+
+<MudExpansionPanels Class="options-panel mb-3" Elevation="2">
+    <MudExpansionPanel Text="Report Options"
+                       IsInitiallyExpanded="true"
+                       Icon="@Icons.Material.Filled.Tune">
+
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+        }
+        else
+        {
+            <MudGrid Spacing="2" Class="pa-2">
+
+                <!-- ═══════════════════════════════════════════
+                     RIGHT COLUMN — Report selection controls
+                     ═══════════════════════════════════════════ -->
+                <MudItem xs="12" md="6">
+                    <MudGrid Spacing="2">
+
+                        <!-- Saved Settings -->
+                        <MudItem xs="12">
+                            <MudSelect T="int?"
+                                       Label="Saved Settings"
+                                       Value="_selectedSettingId"
+                                       ValueChanged="OnSavedSettingChanged"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Clearable="true"
+                                       AdornmentIcon="@Icons.Material.Filled.Bookmark">
+                                @foreach (var s in _savedSettings)
+                                {
+                                    <MudSelectItem T="int?" Value="@((int?)s.SettingId)">
+                                        @s.SettingName @(s.IsPublic ? "🌐" : "🔒")
+                                    </MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Report Type -->
+                        <MudItem xs="12">
+                            <MudSelect T="string"
+                                       Label="Report Type"
+                                       @bind-Value="_options.ReportType"
+                                       ValueChanged="OnReportTypeChanged"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Required="true"
+                                       AdornmentIcon="@Icons.Material.Filled.Assessment">
+                                @foreach (var f in _formats)
+                                {
+                                    <MudSelectItem T="string" Value="@f.Code">@f.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Start / End Period -->
+                        <MudItem xs="6">
+                            <PeriodInput Label="Start Period"
+                                         Value="@_options.StartPeriod"
+                                         ValueChanged="v => _options.StartPeriod = v"
+                                         Disabled="@(!_config.StartPeriodEnabled)" />
+                        </MudItem>
+                        <MudItem xs="6">
+                            <PeriodInput Label="End Period"
+                                         Value="@_options.EndPeriod"
+                                         ValueChanged="v => _options.EndPeriod = v"
+                                         MinPeriod="@_options.StartPeriod"
+                                         Disabled="@(!_config.EndPeriodEnabled)" />
+                        </MudItem>
+
+                        <!-- Format -->
+                        <MudItem xs="12">
+                            <MudSelect T="string"
+                                       Label="Format"
+                                       @bind-Value="_options.Format"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Disabled="@(!_config.FormatEnabled)"
+                                       Clearable="true">
+                                @foreach (var f in _formats)
+                                {
+                                    <MudSelectItem T="string" Value="@f.Code">@f.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Budget -->
+                        <MudItem xs="6">
+                            <MudSelect T="string"
+                                       Label="Budget"
+                                       @bind-Value="_options.Budget"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Disabled="@(!_config.BudgetEnabled)"
+                                       Clearable="true">
+                                @foreach (var b in _budgets)
+                                {
+                                    <MudSelectItem T="string" Value="@b.BudType">@b.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- SF Type -->
+                        <MudItem xs="6">
+                            <MudSelect T="string"
+                                       Label="SF Type"
+                                       @bind-Value="_options.SFType"
+                                       Variant="Variant.Outlined"
+                                       Margin="Margin.Dense"
+                                       Disabled="@(!_config.SFTypeEnabled)"
+                                       Clearable="true">
+                                @foreach (var s in _sfTypes)
+                                {
+                                    <MudSelectItem T="string" Value="@s.SFType">@s.DisplayName</MudSelectItem>
+                                }
+                            </MudSelect>
+                        </MudItem>
+
+                        <!-- Whole Dollars -->
+                        <MudItem xs="12">
+                            <MudCheckBox @bind-Value="_options.WholeDollars"
+                                         Label="Display in whole dollars"
+                                         Color="Color.Primary"
+                                         Disabled="@(!_config.WholeDollarsEnabled)" />
+                        </MudItem>
+
+                    </MudGrid>
+                </MudItem>
+
+                <!-- ═══════════════════════════════════════════
+                     LEFT COLUMN — Entity selection + Basis
+                     ═══════════════════════════════════════════ -->
+                <MudItem xs="12" md="6">
+                    <MudGrid Spacing="2">
+
+                        <!-- Selection Mode radio group -->
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                                Entity / Project Selection
+                            </MudText>
+                            <MudRadioGroup T="SelectionMode"
+                                           @bind-Value="_options.SelectionMode"
+                                           ValueChanged="OnSelectionModeChanged">
+                                <MudRadio T="SelectionMode"
+                                          Value="SelectionMode.All"
+                                          Color="Color.Primary"
+                                          Disabled="@(!_config.EntitySelectionEnabled)">
+                                    All
+                                </MudRadio>
+                                <MudRadio T="SelectionMode"
+                                          Value="SelectionMode.Include"
+                                          Color="Color.Primary"
+                                          Disabled="@(!_config.EntitySelectionEnabled)">
+                                    Include
+                                </MudRadio>
+                                <MudRadio T="SelectionMode"
+                                          Value="SelectionMode.Exclude"
+                                          Color="Color.Primary"
+                                          Disabled="@(!_config.EntitySelectionEnabled)">
+                                    Exclude
+                                </MudRadio>
+                                <MudRadio T="SelectionMode"
+                                          Value="SelectionMode.Range"
+                                          Color="Color.Primary"
+                                          Disabled="@(!_config.EntitySelectionEnabled)">
+                                    Range
+                                </MudRadio>
+                            </MudRadioGroup>
+                        </MudItem>
+
+                        <!-- Entity/Project searchable grid -->
+                        <MudItem xs="12">
+                            <EntitySelectionGrid SelectionMode="@_options.SelectionMode"
+                                                 SelectedIds="@_options.SelectedIds"
+                                                 SelectedIdsChanged="ids => _options.SelectedIds = ids"
+                                                 Entities="@_entities"
+                                                 Projects="@_projects"
+                                                 Disabled="@(!_config.EntitySelectionEnabled || _options.SelectionMode == SelectionMode.All)" />
+                        </MudItem>
+
+                        <!-- Basis multi-select -->
+                        <MudItem xs="12">
+                            <BasisMultiSelect BasisItems="@_basisItems"
+                                              SelectedBasis="@_options.Basis"
+                                              SelectedBasisChanged="basis => _options.Basis = basis"
+                                              Disabled="@(!_config.BasisEnabled)" />
+                        </MudItem>
+
+                    </MudGrid>
+                </MudItem>
+
+            </MudGrid>
+
+            <!-- ═══════════════════════════════════════════
+                 BUTTON ROW
+                 ═══════════════════════════════════════════ -->
+            <MudDivider Class="my-2" />
+            <ButtonRow Options="@_options"
+                       Config="@_config"
+                       IsRunning="@IsRunning"
+                       OnDisplay="@OnDisplay"
+                       OnExcel="@OnExcel"
+                       OnPdf="@OnPdf"
+                       OnSave="@OnSave"
+                       OnClear="@OnClear" />
+        }
+
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@code {
+    [Parameter] public EventCallback<(ReportOptions Options, OutputFormat Format)> OnRunReport { get; set; }
+    [Parameter] public bool IsRunning { get; set; } = false;
+
+    // ── Lookup data ────────────────────────────────────────
+    private List<FormatDto> _formats = new();
+    private List<BudgetDto> _budgets = new();
+    private List<SFTypeDto> _sfTypes = new();
+    private List<BasisDto> _basisItems = new();
+    private List<EntityDto> _entities = new();
+    private List<ProjectDto> _projects = new();
+    private List<SavedSettingDto> _savedSettings = new();
+
+    // ── State ──────────────────────────────────────────────
+    private ReportOptions _options = new();
+    private ReportOptionsConfig _config = ReportOptionsConfig.AllEnabled();
+    private int? _selectedSettingId = null;
+    private bool _loading = true;
+
+    public enum OutputFormat { Screen, Excel, Pdf }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("OptionsPanel initializing — loading lookup data for DbKey={DbKey}",
+            UserSession.DbKey);
+
+        await LoadLookupsAsync();
+        _loading = false;
+    }
+
+    private async Task LoadLookupsAsync()
+    {
+        var tasks = new[]
+        {
+            LookupService.GetFormatsAsync(UserSession.DbKey).ContinueWith(t =>
+            {
+                if (t.Result.IsSuccess) _formats = t.Result.Data!.ToList();
+                else Snackbar.Add($"Failed to load formats: {t.Result.ErrorMessage}", Severity.Warning);
+            }),
+            LookupService.GetBudgetsAsync(UserSession.DbKey).ContinueWith(t =>
+            {
+                if (t.Result.IsSuccess) _budgets = t.Result.Data!.ToList();
+            }),
+            LookupService.GetSFTypesAsync(UserSession.DbKey).ContinueWith(t =>
+            {
+                if (t.Result.IsSuccess) _sfTypes = t.Result.Data!.ToList();
+            }),
+            LookupService.GetBasisAsync(UserSession.DbKey).ContinueWith(t =>
+            {
+                if (t.Result.IsSuccess) _basisItems = t.Result.Data!.ToList();
+            }),
+            LookupService.GetEntitiesAsync(UserSession.DbKey).ContinueWith(t =>
+            {
+                if (t.Result.IsSuccess) _entities = t.Result.Data!.ToList();
+            }),
+            LookupService.GetProjectsAsync(UserSession.DbKey).ContinueWith(t =>
+            {
+                if (t.Result.IsSuccess) _projects = t.Result.Data!.ToList();
+            }),
+            SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId).ContinueWith(t =>
+            {
+                if (t.Result.IsSuccess) _savedSettings = t.Result.Data!.ToList();
+            })
+        };
+
+        await Task.WhenAll(tasks);
+
+        Logger.LogInformation(
+            "OptionsPanel lookups loaded — Formats={F} Budgets={B} SFTypes={S} Basis={Ba} Entities={E} Projects={P} SavedSettings={SS}",
+            _formats.Count, _budgets.Count, _sfTypes.Count, _basisItems.Count,
+            _entities.Count, _projects.Count, _savedSettings.Count);
+    }
+
+    private void OnReportTypeChanged(string reportCode)
+    {
+        _options.ReportType = reportCode;
+
+        if (string.IsNullOrEmpty(reportCode)) return;
+
+        try
+        {
+            var strategy = StrategyResolver.Resolve(reportCode);
+            _config = strategy.GetOptionsConfig();
+
+            Logger.LogDebug(
+                "OptionsPanel — report type changed to {ReportCode}, config loaded from strategy",
+                reportCode);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex,
+                "OptionsPanel — could not resolve strategy for report code {ReportCode}", reportCode);
+            _config = ReportOptionsConfig.AllEnabled();
+        }
+    }
+
+    private async Task OnSavedSettingChanged(int? settingId)
+    {
+        _selectedSettingId = settingId;
+        if (settingId == null) return;
+
+        var result = await SavedSettingsService.GetSettingOptionsAsync(
+            UserSession.DbKey, settingId.Value);
+
+        if (!result.IsSuccess)
+        {
+            Snackbar.Add($"Failed to load setting: {result.ErrorMessage}", Severity.Error);
+            return;
+        }
+
+        var saved = result.Data!;
+        _options.ReportType  = saved.ReportType;
+        _options.StartPeriod = saved.StartPeriod;
+        _options.EndPeriod   = saved.EndPeriod;
+        _options.Format      = saved.Format;
+        _options.Budget      = saved.Budget;
+        _options.SFType      = saved.SFType;
+        _options.WholeDollars = saved.WholeDollars;
+        _options.SelectedIds = saved.SelectedIds;
+        _options.Basis       = saved.Basis;
+
+        if (Enum.TryParse<SelectionMode>(saved.SelectionMode, out var mode))
+            _options.SelectionMode = mode;
+
+        // Re-apply options config for the restored report type
+        if (!string.IsNullOrEmpty(saved.ReportType))
+            OnReportTypeChanged(saved.ReportType);
+
+        Logger.LogInformation(
+            "OptionsPanel — loaded saved setting {SettingId} for report type {ReportType}",
+            settingId, saved.ReportType);
+
+        StateHasChanged();
+    }
+
+    private void OnSelectionModeChanged(SelectionMode mode)
+    {
+        _options.SelectionMode = mode;
+        if (mode == SelectionMode.All)
+            _options.SelectedIds = new();
+    }
+
+    private async Task OnDisplay()
+    {
+        _options.DbKey  = UserSession.DbKey;
+        _options.UserId = UserSession.UserId;
+        await OnRunReport.InvokeAsync((_options, OutputFormat.Screen));
+    }
+
+    private async Task OnExcel()
+    {
+        _options.DbKey  = UserSession.DbKey;
+        _options.UserId = UserSession.UserId;
+        await OnRunReport.InvokeAsync((_options, OutputFormat.Excel));
+    }
+
+    private async Task OnPdf()
+    {
+        _options.DbKey  = UserSession.DbKey;
+        _options.UserId = UserSession.UserId;
+        await OnRunReport.InvokeAsync((_options, OutputFormat.Pdf));
+    }
+
+    private void OnSave()
+    {
+        // Handled by ButtonRow which opens the SaveSettingsModal
+    }
+
+    private void OnClear()
+    {
+        _options        = new ReportOptions();
+        _config         = ReportOptionsConfig.AllEnabled();
+        _selectedSettingId = null;
+        Logger.LogDebug("OptionsPanel — options cleared");
+    }
+
+    /// <summary>Returns current options as SavedSettingOptions for the Save modal.</summary>
+    public SavedSettingOptions GetSaveableOptions() => new()
+    {
+        ReportType    = _options.ReportType,
+        StartPeriod   = _options.StartPeriod,
+        EndPeriod     = _options.EndPeriod,
+        Format        = _options.Format,
+        Budget        = _options.Budget,
+        SFType        = _options.SFType,
+        WholeDollars  = _options.WholeDollars,
+        SelectionMode = _options.SelectionMode.ToString(),
+        SelectedIds   = _options.SelectedIds,
+        Basis         = _options.Basis
+    };
+}

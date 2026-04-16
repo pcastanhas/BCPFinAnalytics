@@ -1,11 +1,150 @@
-@using MudBlazor
+@using BCPFinAnalytics.Common.Models
+@using BCPFinAnalytics.Services.Interfaces
+@using BCPFinAnalytics.Services.Session
+@using System.Text.Json
+@inject IReportStrategyResolver StrategyResolver
+@inject IScreenReportMapper ScreenMapper
+@inject IExcelRenderer ExcelRenderer
+@inject IPdfRenderer PdfRenderer
+@inject UserSessionService UserSession
+@inject ISnackbar Snackbar
+@inject ILogger<ReportPage> Logger
+@inject IJSRuntime JS
 
 @*
-    ReportPage — Main reporting page shell.
-    This component will be fully implemented in Phase 5.
-    Currently a placeholder to allow the solution to compile and run.
+    ReportPage — main report page.
+    Hosts the collapsible options panel and the report display area.
+    Orchestrates report execution and routes output to screen/Excel/PDF.
 *@
 
-<MudText Typo="Typo.h6" Class="pa-4">
-    Report page — coming in Phase 5.
-</MudText>
+<!-- Global loading bar -->
+@if (_isRunning)
+{
+    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="global-loading" />
+}
+
+<!-- Options Panel -->
+<OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
+
+<!-- Report Display Area -->
+@if (_reportResult != null)
+{
+    <ReportDisplay Result="@_reportResult" />
+}
+else if (_hasRun && !_isRunning)
+{
+    <MudAlert Severity="Severity.Info" Class="mt-2">
+        No data returned for the selected criteria.
+    </MudAlert>
+}
+
+@code {
+    private OptionsPanel? _optionsPanel;
+    private ReportResult? _reportResult;
+    private bool _isRunning = false;
+    private bool _hasRun = false;
+
+    private async Task RunReport((ReportOptions Options, OptionsPanel.OutputFormat Format) args)
+    {
+        var (options, format) = args;
+
+        if (string.IsNullOrEmpty(options.ReportType))
+        {
+            Snackbar.Add("Please select a Report Type.", Severity.Warning);
+            return;
+        }
+
+        _isRunning = true;
+        _reportResult = null;
+        _hasRun = false;
+        StateHasChanged();
+
+        var optionsJson = JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = false });
+        Logger.LogInformation(
+            "Report execution started — ReportType={ReportType} Format={Format} DbKey={DbKey} UserId={UserId} Options={Options}",
+            options.ReportType, format, options.DbKey, options.UserId, optionsJson);
+
+        try
+        {
+            var strategy = StrategyResolver.Resolve(options.ReportType);
+            var result = await strategy.ExecuteAsync(options);
+
+            if (!result.IsSuccess)
+            {
+                Logger.LogError("Report execution failed — ReportType={ReportType} Error={Error}",
+                    options.ReportType, result.ErrorMessage);
+                Snackbar.Add($"Report failed: {result.ErrorMessage}", Severity.Error);
+                return;
+            }
+
+            Logger.LogInformation(
+                "Report execution complete — ReportType={ReportType} Rows={Rows} Format={Format}",
+                options.ReportType, result.Data!.Rows.Count, format);
+
+            switch (format)
+            {
+                case OptionsPanel.OutputFormat.Screen:
+                    _reportResult = ScreenMapper.Prepare(result.Data!);
+                    break;
+                case OptionsPanel.OutputFormat.Excel:
+                    await DownloadExcel(result.Data!);
+                    break;
+                case OptionsPanel.OutputFormat.Pdf:
+                    await DownloadPdf(result.Data!);
+                    break;
+            }
+        }
+        catch (InvalidOperationException ex)
+        {
+            Logger.LogError(ex, "No strategy found for {ReportType}", options.ReportType);
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Unexpected report error — ReportType={ReportType}", options.ReportType);
+            Snackbar.Add("An unexpected error occurred. Please try again.", Severity.Error);
+        }
+        finally
+        {
+            _hasRun = true;
+            _isRunning = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DownloadExcel(ReportResult result)
+    {
+        try
+        {
+            var bytes = ExcelRenderer.Render(result);
+            var fileName = $"{result.Metadata.ReportCode}_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx";
+            await DownloadFile(bytes, fileName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Excel render failed");
+            Snackbar.Add("Excel export failed.", Severity.Error);
+        }
+    }
+
+    private async Task DownloadPdf(ReportResult result)
+    {
+        try
+        {
+            var bytes = PdfRenderer.Render(result);
+            var fileName = $"{result.Metadata.ReportCode}_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            await DownloadFile(bytes, fileName, "application/pdf");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "PDF render failed");
+            Snackbar.Add("PDF export failed.", Severity.Error);
+        }
+    }
+
+    private async Task DownloadFile(byte[] bytes, string fileName, string mimeType)
+    {
+        var base64 = Convert.ToBase64String(bytes);
+        await JS.InvokeVoidAsync("downloadFile", fileName, mimeType, base64);
+    }
+}

@@ -1,0 +1,125 @@
+@using BCPFinAnalytics.Common.Enums
+@using BCPFinAnalytics.Common.Models
+
+@*
+    ReportDisplay — row-type driven financial report renderer.
+    Renders a ReportResult as a styled HTML table.
+    Each row's RowType determines its CSS class and formatting.
+    Supports both fixed-column and dynamic crosstab reports.
+*@
+
+@if (Result == null || !Result.HasData)
+{
+    @if (Result != null && !Result.HasData)
+    {
+        <MudAlert Severity="Severity.Info" Class="mt-2">
+            No data returned for the selected criteria.
+        </MudAlert>
+    }
+    return;
+}
+
+<!-- Report header -->
+<div class="report-header mb-2">
+    <MudText Typo="Typo.h6" Style="font-weight:600;">
+        @Result.Metadata.ReportTitle
+    </MudText>
+    <MudText Typo="Typo.caption" Color="Color.Secondary">
+        @Result.Metadata.EntityName
+        @if (!string.IsNullOrEmpty(Result.Metadata.StartPeriod))
+        {
+            <span> &nbsp;|&nbsp; @Result.Metadata.StartPeriod
+            @if (!string.IsNullOrEmpty(Result.Metadata.EndPeriod))
+            {
+                <span> — @Result.Metadata.EndPeriod</span>
+            }
+            </span>
+        }
+        <span> &nbsp;|&nbsp; Run: @Result.Metadata.RunDate.ToString("MM/dd/yyyy hh:mm tt")</span>
+        <span> &nbsp;|&nbsp; DB: @Result.Metadata.DbKey</span>
+        @if (Result.Metadata.WholeDollars)
+        {
+            <span> &nbsp;|&nbsp; Whole Dollars</span>
+        }
+    </MudText>
+</div>
+
+<!-- Scrollable report table -->
+<div class="report-container">
+    <table class="report-table">
+        <thead>
+            <tr>
+                <th style="text-align:left; width:110px;">Account</th>
+                <th style="text-align:left; min-width:200px;">Description</th>
+                @foreach (var col in Result.Columns)
+                {
+                    <th style="width:@(col.Width.HasValue ? col.Width + "px" : "120px");">
+                        @col.Header
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var row in Result.Rows)
+            {
+                <tr class="@GetRowClass(row.RowType)">
+                    <td>@row.AccountCode</td>
+                    <td style="padding-left: @(row.Indent * 16 + 12)px;">
+                        @row.AccountName
+                    </td>
+                    @foreach (var col in Result.Columns)
+                    {
+                        <td class="numeric">
+                            @RenderCell(row, col)
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@code {
+    [Parameter] public ReportResult? Result { get; set; }
+
+    private string GetRowClass(RowType rowType) => rowType switch
+    {
+        RowType.SectionHeader => "row-section-header",
+        RowType.SubHeader     => "row-sub-header",
+        RowType.Detail        => "row-detail",
+        RowType.Total         => "row-total",
+        RowType.GrandTotal    => "row-grand-total",
+        _                     => "row-detail"
+    };
+
+    private string RenderCell(ReportRow row, ReportColumn col)
+    {
+        // Check for display override (e.g. "N/A")
+        if (row.CellOverrides.TryGetValue(col.ColumnId, out var overrideText))
+            return overrideText;
+
+        // Header rows have no data
+        if (row.RowType is RowType.SectionHeader or RowType.SubHeader)
+            return string.Empty;
+
+        if (!row.Cells.TryGetValue(col.ColumnId, out var value) || value == null)
+            return string.Empty;
+
+        return col.DataType switch
+        {
+            ColumnDataType.Currency => FormatCurrency(value.Value),
+            ColumnDataType.Percent  => $"{value.Value:N2}%",
+            ColumnDataType.Integer  => $"{value.Value:N0}",
+            ColumnDataType.Text     => value.Value.ToString(),
+            _                       => FormatCurrency(value.Value)
+        };
+    }
+
+    private string FormatCurrency(decimal value)
+    {
+        if (Result == null) return value.ToString("N2");
+        return Result.Metadata.WholeDollars
+            ? $"{value:N0}"
+            : $"{value:N2}";
+    }
+}

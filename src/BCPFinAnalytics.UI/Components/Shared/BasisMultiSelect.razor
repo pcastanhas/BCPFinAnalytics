@@ -1,0 +1,76 @@
+@using BCPFinAnalytics.Common.DTOs
+
+@*
+    BasisMultiSelect — multi-select listbox for basis selection.
+    Sourced from BTYP WHERE basis <> 'B'.
+    User can select one or more basis values.
+*@
+
+<div class="basis-list-container">
+    <MudText Typo="Typo.caption" Class="mb-1" Color="Color.Secondary">
+        Basis @(Disabled ? "" : $"({SelectedBasis.Count} selected)")
+    </MudText>
+
+    <div class="basis-list @(Disabled ? "disabled" : "")">
+        @if (!BasisItems.Any())
+        {
+            <MudText Typo="Typo.caption" Class="pa-2" Color="Color.Secondary">
+                Loading...
+            </MudText>
+        }
+        else
+        {
+            @foreach (var item in BasisItems)
+            {
+                var isSelected = SelectedBasis.Contains(item.Basis);
+                <div class="basis-row @(isSelected ? "selected" : "") @(Disabled ? "" : "clickable")"
+                     @onclick="() => ToggleBasis(item.Basis)">
+                    <MudCheckBox Value="@isSelected"
+                                 ValueChanged="@((bool v) => ToggleBasis(item.Basis))"
+                                 Color="Color.Primary"
+                                 Dense="true"
+                                 Disabled="@Disabled" />
+                    <span class="basis-label">@item.DisplayName</span>
+                </div>
+            }
+        }
+    </div>
+
+    @if (!Disabled && BasisItems.Any())
+    {
+        <div class="basis-actions mt-1">
+            <MudLink Typo="Typo.caption"
+                     OnClick="SelectAll"
+                     Class="mr-2">All</MudLink>
+            <MudLink Typo="Typo.caption"
+                     OnClick="ClearAll">None</MudLink>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public List<BasisDto> BasisItems { get; set; } = new();
+    [Parameter] public List<string> SelectedBasis { get; set; } = new();
+    [Parameter] public EventCallback<List<string>> SelectedBasisChanged { get; set; }
+    [Parameter] public bool Disabled { get; set; } = false;
+
+    private async Task ToggleBasis(string basis)
+    {
+        if (Disabled) return;
+        var current = new List<string>(SelectedBasis);
+        if (current.Contains(basis)) current.Remove(basis);
+        else current.Add(basis);
+        await SelectedBasisChanged.InvokeAsync(current);
+    }
+
+    private async Task SelectAll()
+    {
+        var all = BasisItems.Select(b => b.Basis).ToList();
+        await SelectedBasisChanged.InvokeAsync(all);
+    }
+
+    private async Task ClearAll()
+    {
+        await SelectedBasisChanged.InvokeAsync(new List<string>());
+    }
+}

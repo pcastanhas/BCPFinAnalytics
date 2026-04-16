@@ -153,3 +153,44 @@ html, body {
     padding: 12px 0 4px 0;
     flex-wrap: wrap;
 }
+
+/* ── Entity grid (extended) ───────────────────────────── */
+.entity-grid-container { width: 100%; }
+
+.entity-grid.disabled { opacity: 0.5; pointer-events: none; }
+
+.entity-row {
+    display: flex;
+    align-items: center;
+    padding: 3px 8px;
+    cursor: pointer;
+    gap: 8px;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 13px;
+}
+.entity-row:hover { background-color: #e8f0fe; }
+.entity-row.selected { background-color: #e3f2fd; }
+.entity-id { font-family: 'Courier New', monospace; font-size: 12px; color: #555; min-width: 80px; }
+.entity-name { color: #212121; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.entity-selection-summary { font-size: 12px; }
+
+/* ── Basis list (extended) ────────────────────────────── */
+.basis-list-container { width: 100%; }
+.basis-list.disabled { opacity: 0.5; pointer-events: none; }
+
+.basis-row {
+    display: flex;
+    align-items: center;
+    padding: 2px 8px;
+    font-size: 13px;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 6px;
+}
+.basis-row.clickable { cursor: pointer; }
+.basis-row.clickable:hover { background-color: #e8f0fe; }
+.basis-row.selected { background-color: #e3f2fd; }
+.basis-label { color: #212121; }
+.basis-actions { display: flex; gap: 8px; font-size: 12px; }
+
+/* ── Global loading bar ───────────────────────────────── */
+.global-loading { position: fixed; top: 64px; left: 0; right: 0; z-index: 1300; }

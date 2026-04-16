@@ -1,0 +1,142 @@
+@using BCPFinAnalytics.Common.Models
+@using BCPFinAnalytics.Common.Enums
+@using Microsoft.Extensions.Options
+@inject IDialogService DialogService
+@inject BCPFinAnalytics.Services.Session.UserSessionService UserSession
+@inject IOptions<BCPFinAnalytics.Services.AppSettings> AppSettings
+@inject ILogger<ButtonRow> Logger
+
+@*
+    ButtonRow — Display / Excel / PDF / Save / Clear buttons.
+    - All buttons disabled while IsRunning = true
+    - PDF button disabled for crosstab reports when entity count > CrosstabMaxEntitiesForPdf
+    - Save opens SaveSettingsModal dialog
+*@
+
+<div class="button-row">
+
+    <!-- Display -->
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.TableChart"
+               OnClick="OnDisplay"
+               Disabled="@(_isDisabled || !_hasReportType)"
+               Size="Size.Medium">
+        Display
+    </MudButton>
+
+    <!-- Excel -->
+    <MudButton Variant="Variant.Filled"
+               Color="Color.Success"
+               StartIcon="@Icons.Material.Filled.GridOn"
+               OnClick="OnExcel"
+               Disabled="@(_isDisabled || !_hasReportType)"
+               Size="Size.Medium">
+        Excel
+    </MudButton>
+
+    <!-- PDF — conditionally disabled for crosstab over entity limit -->
+    <MudTooltip Text="@_pdfTooltip" Disabled="@(!_pdfDisabled)">
+        <MudButton Variant="Variant.Filled"
+                   Color="Color.Error"
+                   StartIcon="@Icons.Material.Filled.PictureAsPdf"
+                   OnClick="OnPdf"
+                   Disabled="@(_isDisabled || !_hasReportType || _pdfDisabled)"
+                   Size="Size.Medium">
+            PDF
+        </MudButton>
+    </MudTooltip>
+
+    <MudDivider Vertical="true" FlexItem="true" Class="mx-1" />
+
+    <!-- Save -->
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Primary"
+               StartIcon="@Icons.Material.Filled.Save"
+               OnClick="OpenSaveModal"
+               Disabled="@(_isDisabled || !_hasReportType)"
+               Size="Size.Medium">
+        Save
+    </MudButton>
+
+    <!-- Clear -->
+    <MudButton Variant="Variant.Outlined"
+               Color="Color.Default"
+               StartIcon="@Icons.Material.Filled.ClearAll"
+               OnClick="OnClear"
+               Disabled="@IsRunning"
+               Size="Size.Medium">
+        Clear
+    </MudButton>
+
+    <!-- Running indicator -->
+    @if (IsRunning)
+    {
+        <MudProgressCircular Color="Color.Primary"
+                             Size="Size.Small"
+                             Indeterminate="true"
+                             Class="ml-2" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-1">
+            Running...
+        </MudText>
+    }
+
+</div>
+
+@code {
+    [Parameter] public ReportOptions Options { get; set; } = new();
+    [Parameter] public ReportOptionsConfig Config { get; set; } = new();
+    [Parameter] public bool IsRunning { get; set; } = false;
+    [Parameter] public EventCallback OnDisplay { get; set; }
+    [Parameter] public EventCallback OnExcel { get; set; }
+    [Parameter] public EventCallback OnPdf { get; set; }
+    [Parameter] public EventCallback OnSave { get; set; }
+    [Parameter] public EventCallback OnClear { get; set; }
+    [Parameter] public Func<SavedSettingOptions>? GetSaveableOptions { get; set; }
+
+    private bool _isDisabled => IsRunning;
+    private bool _hasReportType => !string.IsNullOrEmpty(Options.ReportType);
+
+    private bool _pdfDisabled
+    {
+        get
+        {
+            if (!Config.IsCrosstab) return false;
+            var max = AppSettings.Value.CrosstabMaxEntitiesForPdf;
+            return Options.SelectedIds.Count > max;
+        }
+    }
+
+    private string _pdfTooltip
+    {
+        get
+        {
+            if (!_pdfDisabled) return string.Empty;
+            var max = AppSettings.Value.CrosstabMaxEntitiesForPdf;
+            return $"PDF export is limited to {max} entities for crosstab reports. " +
+                   $"Please reduce your selection or use Excel export.";
+        }
+    }
+
+    private async Task OpenSaveModal()
+    {
+        var options = GetSaveableOptions?.Invoke() ?? new SavedSettingOptions();
+
+        Logger.LogDebug("ButtonRow — opening Save Settings modal for report type {ReportType}",
+            options.ReportType);
+
+        var parameters = new DialogParameters
+        {
+            { nameof(SaveSettingsModal.Options), options }
+        };
+
+        var dialogOptions = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        await DialogService.ShowAsync<SaveSettingsModal>("Save Settings", parameters, dialogOptions);
+    }
+}
