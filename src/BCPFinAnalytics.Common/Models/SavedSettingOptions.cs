@@ -22,6 +22,8 @@ public class SavedSettingOptions
     public string Budget { get; set; } = string.Empty;
     public string SFType { get; set; } = string.Empty;
     public bool WholeDollars { get; set; } = false;
+    public bool SuppressZeroAccounts { get; set; } = false;
+    public bool SuppressInactiveSubtotals { get; set; } = false;
     public string SelectionMode { get; set; } = "All";
     public List<string> SelectedIds { get; set; } = new();
     public List<string> Basis { get; set; } = new();

@@ -146,6 +146,20 @@
                                          Disabled="@(!_config.WholeDollarsEnabled)" />
                         </MudItem>
 
+                        <!-- Suppress accounts with 0 value -->
+                        <MudItem xs="12">
+                            <MudCheckBox @bind-Value="_options.SuppressZeroAccounts"
+                                         Label="Suppress accounts with 0 value"
+                                         Color="Color.Primary" />
+                        </MudItem>
+
+                        <!-- Suppress subtotals with no activity -->
+                        <MudItem xs="12">
+                            <MudCheckBox @bind-Value="_options.SuppressInactiveSubtotals"
+                                         Label="Suppress subtotals with no activity"
+                                         Color="Color.Primary" />
+                        </MudItem>
+
                     </MudGrid>
                 </MudItem>
 
@@ -348,6 +362,8 @@
         _options.Budget      = saved.Budget;
         _options.SFType      = saved.SFType;
         _options.WholeDollars = saved.WholeDollars;
+        _options.SuppressZeroAccounts = saved.SuppressZeroAccounts;
+        _options.SuppressInactiveSubtotals = saved.SuppressInactiveSubtotals;
         _options.SelectedIds = saved.SelectedIds;
         _options.Basis       = saved.Basis;
 
@@ -416,6 +432,8 @@
         Budget        = _options.Budget,
         SFType        = _options.SFType,
         WholeDollars  = _options.WholeDollars,
+        SuppressZeroAccounts      = _options.SuppressZeroAccounts,
+        SuppressInactiveSubtotals = _options.SuppressInactiveSubtotals,
         SelectionMode = _options.SelectionMode.ToString(),
         SelectedIds   = _options.SelectedIds,
         Basis         = _options.Basis
