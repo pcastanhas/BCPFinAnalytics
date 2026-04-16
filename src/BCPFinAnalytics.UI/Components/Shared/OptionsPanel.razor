@@ -161,29 +161,29 @@
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
                                 Entity / Project Selection
                             </MudText>
-                            <MudRadioGroup T="SelectionMode"
+                            <MudRadioGroup T="AppSelectionMode"
                                            Value="@_options.SelectionMode"
                                            ValueChanged="@OnSelectionModeChanged">
-                                <MudRadio T="SelectionMode"
-                                          Value="SelectionMode.All"
+                                <MudRadio T="AppSelectionMode"
+                                          Value="AppSelectionMode.All"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     All
                                 </MudRadio>
-                                <MudRadio T="SelectionMode"
-                                          Value="SelectionMode.Include"
+                                <MudRadio T="AppSelectionMode"
+                                          Value="AppSelectionMode.Include"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     Include
                                 </MudRadio>
-                                <MudRadio T="SelectionMode"
-                                          Value="SelectionMode.Exclude"
+                                <MudRadio T="AppSelectionMode"
+                                          Value="AppSelectionMode.Exclude"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     Exclude
                                 </MudRadio>
-                                <MudRadio T="SelectionMode"
-                                          Value="SelectionMode.Range"
+                                <MudRadio T="AppSelectionMode"
+                                          Value="AppSelectionMode.Range"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
                                     Range
@@ -193,12 +193,12 @@
 
                         <!-- Entity/Project searchable grid -->
                         <MudItem xs="12">
-                            <EntitySelectionGrid SelectionMode="@_options.SelectionMode"
+                            <EntitySelectionGrid Mode="@_options.SelectionMode"
                                                  SelectedIds="@_options.SelectedIds"
                                                  SelectedIdsChanged="ids => _options.SelectedIds = ids"
                                                  Entities="@_entities"
                                                  Projects="@_projects"
-                                                 Disabled="@(!_config.EntitySelectionEnabled || _options.SelectionMode == SelectionMode.All)" />
+                                                 Disabled="@(!_config.EntitySelectionEnabled || _options.SelectionMode == AppSelectionMode.All)" />
                         </MudItem>
 
                         <!-- Basis multi-select -->
@@ -352,7 +352,7 @@
         _options.SelectedIds = saved.SelectedIds;
         _options.Basis       = saved.Basis;
 
-        if (Enum.TryParse<BCPFinAnalytics.Common.Enums.SelectionMode>(saved.SelectionMode, out var mode))
+        if (Enum.TryParse<AppSelectionMode>(saved.SelectionMode, out var mode))
             _options.SelectionMode = mode;
 
         // Re-apply options config for the restored report type
@@ -366,10 +366,10 @@
         StateHasChanged();
     }
 
-    private void OnSelectionModeChanged(BCPFinAnalytics.Common.Enums.SelectionMode mode)
+    private void OnSelectionModeChanged(AppSelectionMode mode)
     {
         _options.SelectionMode = mode;
-        if (mode == BCPFinAnalytics.Common.Enums.SelectionMode.All)
+        if (mode == AppSelectionMode.All)
             _options.SelectedIds = new();
     }
 
