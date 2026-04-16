@@ -1,6 +1,5 @@
 @using BCPFinAnalytics.Common.DTOs
 @using BCPFinAnalytics.Common.Enums
-@using SelectionMode = BCPFinAnalytics.Common.Enums.SelectionMode
 
 @*
     EntitySelectionGrid — searchable entity/project selection component.
@@ -75,7 +74,7 @@
 
         <!-- Selection summary and validation -->
         <div class="entity-selection-summary mt-1">
-            @if (SelectionMode == SelectionMode.Range)
+            @if (SelectionMode == BCPFinAnalytics.Common.Enums.SelectionMode.Range)
             {
                 @if (SelectedIds.Count == 0)
                 {
@@ -107,7 +106,7 @@
 </div>
 
 @code {
-    [Parameter] public SelectionMode SelectionMode { get; set; } = SelectionMode.All;
+    [Parameter] public BCPFinAnalytics.Common.Enums.SelectionMode SelectionMode { get; set; } = BCPFinAnalytics.Common.Enums.SelectionMode.All;
     [Parameter] public List<string> SelectedIds { get; set; } = new();
     [Parameter] public EventCallback<List<string>> SelectedIdsChanged { get; set; }
     [Parameter] public List<EntityDto> Entities { get; set; } = new();
@@ -128,11 +127,11 @@
 
     private async Task ToggleItem(string id)
     {
-        if (Disabled || SelectionMode == SelectionMode.All) return;
+        if (Disabled || SelectionMode == BCPFinAnalytics.Common.Enums.SelectionMode.All) return;
 
         var current = new List<string>(SelectedIds);
 
-        if (SelectionMode == SelectionMode.Range)
+        if (SelectionMode == BCPFinAnalytics.Common.Enums.SelectionMode.Range)
         {
             if (current.Contains(id))
             {
@@ -157,10 +156,10 @@
     /// <summary>Validates selection based on current mode.</summary>
     public bool IsValid => SelectionMode switch
     {
-        SelectionMode.All => true,
-        SelectionMode.Include => SelectedIds.Any(),
-        SelectionMode.Exclude => SelectedIds.Any(),
-        SelectionMode.Range => SelectedIds.Count == 2,
+        BCPFinAnalytics.Common.Enums.SelectionMode.All => true,
+        BCPFinAnalytics.Common.Enums.SelectionMode.Include => SelectedIds.Any(),
+        BCPFinAnalytics.Common.Enums.SelectionMode.Exclude => SelectedIds.Any(),
+        BCPFinAnalytics.Common.Enums.SelectionMode.Range => SelectedIds.Count == 2,
         _ => false
     };
 }

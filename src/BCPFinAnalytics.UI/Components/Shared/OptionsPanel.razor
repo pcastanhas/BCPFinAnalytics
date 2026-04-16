@@ -1,6 +1,5 @@
 @using BCPFinAnalytics.Common.DTOs
 @using BCPFinAnalytics.Common.Enums
-@using SelectionMode = BCPFinAnalytics.Common.Enums.SelectionMode
 @using BCPFinAnalytics.Common.Models
 @using BCPFinAnalytics.Services.Interfaces
 @using BCPFinAnalytics.Services.Session
@@ -353,7 +352,7 @@
         _options.SelectedIds = saved.SelectedIds;
         _options.Basis       = saved.Basis;
 
-        if (Enum.TryParse<SelectionMode>(saved.SelectionMode, out var mode))
+        if (Enum.TryParse<BCPFinAnalytics.Common.Enums.SelectionMode>(saved.SelectionMode, out var mode))
             _options.SelectionMode = mode;
 
         // Re-apply options config for the restored report type
@@ -367,10 +366,10 @@
         StateHasChanged();
     }
 
-    private void OnSelectionModeChanged(SelectionMode mode)
+    private void OnSelectionModeChanged(BCPFinAnalytics.Common.Enums.SelectionMode mode)
     {
         _options.SelectionMode = mode;
-        if (mode == SelectionMode.All)
+        if (mode == BCPFinAnalytics.Common.Enums.SelectionMode.All)
             _options.SelectedIds = new();
     }
 
