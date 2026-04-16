@@ -44,7 +44,7 @@ public class LookupRepository : ILookupRepository
 
         try
         {
-            _logger.LogVerbose("LookupRepository.GetFormatsAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+            _logger.LogTrace("LookupRepository.GetFormatsAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
 
             await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
             var result = await conn.QueryAsync<FormatDto>(sql);
@@ -76,7 +76,7 @@ public class LookupRepository : ILookupRepository
 
         try
         {
-            _logger.LogVerbose("LookupRepository.GetBudgetsAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+            _logger.LogTrace("LookupRepository.GetBudgetsAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
 
             await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
             var result = await conn.QueryAsync<BudgetDto>(sql);
@@ -108,7 +108,7 @@ public class LookupRepository : ILookupRepository
 
         try
         {
-            _logger.LogVerbose("LookupRepository.GetSFTypesAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+            _logger.LogTrace("LookupRepository.GetSFTypesAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
 
             await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
             var result = await conn.QueryAsync<SFTypeDto>(sql);
@@ -141,7 +141,7 @@ public class LookupRepository : ILookupRepository
 
         try
         {
-            _logger.LogVerbose("LookupRepository.GetBasisAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+            _logger.LogTrace("LookupRepository.GetBasisAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
 
             await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
             var result = await conn.QueryAsync<BasisDto>(sql);
@@ -173,7 +173,7 @@ public class LookupRepository : ILookupRepository
 
         try
         {
-            _logger.LogVerbose("LookupRepository.GetEntitiesAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+            _logger.LogTrace("LookupRepository.GetEntitiesAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
 
             await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
             var result = await conn.QueryAsync<EntityDto>(sql);
@@ -205,7 +205,7 @@ public class LookupRepository : ILookupRepository
 
         try
         {
-            _logger.LogVerbose("LookupRepository.GetProjectsAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
+            _logger.LogTrace("LookupRepository.GetProjectsAsync — DbKey={DbKey} SQL={Sql}", dbKey, sql);
 
             await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
             var result = await conn.QueryAsync<ProjectDto>(sql);

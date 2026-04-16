@@ -45,7 +45,7 @@ public class SavedSettingsRepository : ISavedSettingsRepository
 
         try
         {
-            _logger.LogVerbose(
+            _logger.LogTrace(
                 "SavedSettingsRepository.GetAllForUserAsync — DbKey={DbKey} UserId={UserId} SQL={Sql}",
                 dbKey, userId, sql);
 
@@ -88,7 +88,7 @@ public class SavedSettingsRepository : ISavedSettingsRepository
 
         try
         {
-            _logger.LogVerbose(
+            _logger.LogTrace(
                 "SavedSettingsRepository.GetByIdAsync — DbKey={DbKey} SettingId={SettingId} SQL={Sql}",
                 dbKey, settingId, sql);
 
@@ -123,7 +123,7 @@ public class SavedSettingsRepository : ISavedSettingsRepository
 
         try
         {
-            _logger.LogVerbose(
+            _logger.LogTrace(
                 "SavedSettingsRepository.InsertAsync — DbKey={DbKey} SettingName={Name} UserId={UserId} SQL={Sql}",
                 dbKey, setting.SettingName, setting.UserId, sql);
 
@@ -170,7 +170,7 @@ public class SavedSettingsRepository : ISavedSettingsRepository
 
         try
         {
-            _logger.LogVerbose(
+            _logger.LogTrace(
                 "SavedSettingsRepository.UpdateAsync — DbKey={DbKey} SettingId={SettingId} SQL={Sql}",
                 dbKey, setting.SettingId, sql);
 
@@ -209,7 +209,7 @@ public class SavedSettingsRepository : ISavedSettingsRepository
 
         try
         {
-            _logger.LogVerbose(
+            _logger.LogTrace(
                 "SavedSettingsRepository.DeleteAsync — DbKey={DbKey} SettingId={SettingId} SQL={Sql}",
                 dbKey, settingId, sql);
 
