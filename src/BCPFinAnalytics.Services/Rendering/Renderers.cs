@@ -5,39 +5,6 @@ using Microsoft.Extensions.Logging;
 namespace BCPFinAnalytics.Services.Rendering;
 
 // ══════════════════════════════════════════════════════════════
-//  ExcelRenderer — stub, fully implemented in Phase 4
-// ══════════════════════════════════════════════════════════════
-
-/// <summary>
-/// Renders a ReportResult to an Excel workbook using ClosedXML.
-/// Never calls the database or services layer.
-/// Fully implemented in Phase 4.
-/// </summary>
-public class ExcelRenderer : IExcelRenderer
-{
-    private readonly ILogger<ExcelRenderer> _logger;
-
-    public ExcelRenderer(ILogger<ExcelRenderer> logger)
-    {
-        _logger = logger;
-    }
-
-    public byte[] Render(ReportResult reportResult)
-    {
-        _logger.LogDebug("ExcelRenderer.Render — report={ReportCode}", reportResult.Metadata.ReportCode);
-        // TODO: Phase 4 — implement ClosedXML rendering
-        throw new NotImplementedException("ExcelRenderer will be fully implemented in Phase 4.");
-    }
-
-    public byte[] RenderPackage(IEnumerable<(string SheetName, ReportResult Result)> sheets)
-    {
-        _logger.LogDebug("ExcelRenderer.RenderPackage — {Count} sheets", sheets.Count());
-        // TODO: Phase 4 — implement multi-sheet ClosedXML workbook for V2 Report Packages
-        throw new NotImplementedException("ExcelRenderer.RenderPackage will be fully implemented in Phase 4.");
-    }
-}
-
-// ══════════════════════════════════════════════════════════════
 //  PdfRenderer — stub, fully implemented in Phase 4
 // ══════════════════════════════════════════════════════════════
 
