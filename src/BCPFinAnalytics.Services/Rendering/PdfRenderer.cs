@@ -377,7 +377,7 @@ public class PdfRenderer : IPdfRenderer
     // ══════════════════════════════════════════════════════════════
 
     private static void HeaderCell(
-        HeaderDescriptor header, string text,
+        ITableCellContainer header, string text,
         TextAlignment align = TextAlignment.Left)
     {
         header.Cell()
