@@ -5,32 +5,6 @@ using Microsoft.Extensions.Logging;
 namespace BCPFinAnalytics.Services.Rendering;
 
 // ══════════════════════════════════════════════════════════════
-//  PdfRenderer — stub, fully implemented in Phase 4
-// ══════════════════════════════════════════════════════════════
-
-/// <summary>
-/// Renders a ReportResult to a PDF document using QuestPDF.
-/// Never calls the database or services layer.
-/// Fully implemented in Phase 4.
-/// </summary>
-public class PdfRenderer : IPdfRenderer
-{
-    private readonly ILogger<PdfRenderer> _logger;
-
-    public PdfRenderer(ILogger<PdfRenderer> logger)
-    {
-        _logger = logger;
-    }
-
-    public byte[] Render(ReportResult reportResult)
-    {
-        _logger.LogDebug("PdfRenderer.Render — report={ReportCode}", reportResult.Metadata.ReportCode);
-        // TODO: Phase 4 — implement QuestPDF rendering
-        throw new NotImplementedException("PdfRenderer will be fully implemented in Phase 4.");
-    }
-}
-
-// ══════════════════════════════════════════════════════════════
 //  ScreenReportMapper — stub, fully implemented in Phase 4
 // ══════════════════════════════════════════════════════════════
 
