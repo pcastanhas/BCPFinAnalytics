@@ -224,3 +224,74 @@ html, body {
     border-radius: 2px;
     padding: 0 2px;
 }
+
+/* ── GL Detail Dialog ─────────────────────────────────── */
+.gl-detail-container {
+    overflow-x: auto;
+    max-height: 60vh;
+    overflow-y: auto;
+    border: 1px solid #e0e0e0;
+    border-radius: 4px;
+}
+
+.gl-detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.gl-detail-table th {
+    background-color: #1565C0;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 6px 10px;
+    text-align: left;
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.gl-detail-table th:last-child {
+    text-align: right;
+}
+
+.gl-detail-row td {
+    padding: 3px 10px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: top;
+}
+
+.gl-detail-row:hover td {
+    background-color: #f0f4ff;
+}
+
+.gl-detail-total td {
+    font-weight: 700;
+    border-top: 2px solid #1565C0;
+    padding: 4px 10px;
+    background-color: #e3f2fd;
+}
+
+.gl-detail-table td.amount,
+.gl-detail-table th:last-child {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.gl-detail-table td.amount.negative {
+    color: #c62828;
+}
+
+.gl-detail-table td.mono {
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+}
+
+.gl-detail-table td.descrptn {
+    max-width: 250px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}

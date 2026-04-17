@@ -1,0 +1,199 @@
+@using BCPFinAnalytics.Common.DTOs
+@using BCPFinAnalytics.Common.Models
+@using BCPFinAnalytics.Services.GlDetail
+@using BCPFinAnalytics.Services.Session
+@inject IGlDetailService GlDetailService
+@inject UserSessionService UserSession
+@inject ISnackbar Snackbar
+@inject ILogger<GLDetailDialog> Logger
+
+@*
+    GLDetailDialog — GL transaction drill-down modal.
+    Opens when a drillable cell is clicked in ReportDisplay.
+    Shows JOURNAL (open) + GHIS (closed) rows for the clicked cell context.
+
+    Supports:
+      - Single or multiple entities (consolidated reports)
+      - Single or multiple accounts (subtotal-level detail)
+      - Basis expansion (A/C automatically includes B rows)
+*@
+
+<MudDialog Style="min-width:900px; max-width:98vw;">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">GL Detail</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @DrillDown.DisplayLabel
+                </MudText>
+            </div>
+        </MudStack>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4 text-center">
+                Loading transactions...
+            </MudText>
+        }
+        else if (_rows.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">
+                No transactions found for the selected criteria.
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Summary line -->
+            <MudStack Row="true" Spacing="3" Class="mb-3" AlignItems="AlignItems.Center">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary" Icon="@Icons.Material.Filled.Receipt">
+                    @_rows.Count transaction@(_rows.Count == 1 ? "" : "s")
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success" Icon="@Icons.Material.Filled.AttachMoney">
+                    Total: @FormatAmount(_rows.Sum(r => r.Amt))
+                </MudChip>
+                <MudSpacer />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @DrillDown.PeriodFrom – @DrillDown.PeriodTo
+                </MudText>
+            </MudStack>
+
+            <!-- Transaction table -->
+            <div class="gl-detail-container">
+                <table class="gl-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            <th>Ref</th>
+                            <th>Source</th>
+                            <th>Basis</th>
+                            @if (DrillDown.EntityIds.Count > 1)
+                            {
+                                <th>Entity</th>
+                            }
+                            @if (DrillDown.AcctNums.Count > 1)
+                            {
+                                <th>Account</th>
+                            }
+                            <th>Dept</th>
+                            <th>Item</th>
+                            <th>Job</th>
+                            <th>Date</th>
+                            <th style="min-width:200px;">Description</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _rows)
+                        {
+                            <tr class="gl-detail-row">
+                                <td>@FormatPeriod(row.Period)</td>
+                                <td class="mono">@row.Ref</td>
+                                <td>@row.Source</td>
+                                <td>@row.Basis</td>
+                                @if (DrillDown.EntityIds.Count > 1)
+                                {
+                                    <td class="mono">@row.EntityId</td>
+                                }
+                                @if (DrillDown.AcctNums.Count > 1)
+                                {
+                                    <td class="mono">@row.AcctNum.Trim()</td>
+                                }
+                                <td>@row.Department</td>
+                                <td class="mono">@row.Item</td>
+                                <td>@row.JobCode</td>
+                                <td>@(row.EntrDate?.ToString("MM/dd/yy") ?? "")</td>
+                                <td class="descrptn">@row.Descrptn</td>
+                                <td class="amount @(row.Amt < 0 ? "negative" : "")">
+                                    @FormatAmount(row.Amt)
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="gl-detail-total">
+                            <td colspan="@TotalColspan">Total</td>
+                            <td class="amount @(_rows.Sum(r => r.Amt) < 0 ? "negative" : "")">
+                                @FormatAmount(_rows.Sum(r => r.Amt))
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        <MudButton OnClick="Close"
+                   Variant="Variant.Text"
+                   Color="Color.Default">
+            Close
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public DrillDownRef DrillDown { get; set; } = null!;
+
+    private List<GlDetailRow> _rows = new();
+    private bool _loading = true;
+
+    // Adjust colspan based on whether multi-entity/account columns are shown
+    private int TotalColspan =>
+        8
+        + (DrillDown.EntityIds.Count > 1 ? 1 : 0)
+        + (DrillDown.AcctNums.Count > 1 ? 1 : 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDetailAsync();
+    }
+
+    private async Task LoadDetailAsync()
+    {
+        _loading = true;
+
+        Logger.LogInformation(
+            "GLDetailDialog loading — DbKey={DbKey} Label={Label} " +
+            "Entities=[{Entities}] AcctNums=[{AcctNums}] Period={From}-{To}",
+            UserSession.DbKey,
+            DrillDown.DisplayLabel,
+            string.Join(",", DrillDown.EntityIds),
+            string.Join(",", DrillDown.AcctNums),
+            DrillDown.PeriodFrom,
+            DrillDown.PeriodTo);
+
+        var result = await GlDetailService.GetDetailAsync(UserSession.DbKey, DrillDown);
+
+        if (result.IsSuccess)
+        {
+            _rows = result.Data!.ToList();
+            Logger.LogInformation(
+                "GLDetailDialog loaded {Count} rows — Label={Label}",
+                _rows.Count, DrillDown.DisplayLabel);
+        }
+        else
+        {
+            Logger.LogError(
+                "GLDetailDialog load failed — {Error}", result.ErrorMessage);
+            Snackbar.Add($"Failed to load GL detail: {result.ErrorMessage}", Severity.Error);
+        }
+
+        _loading = false;
+    }
+
+    private void Close() => MudDialog.Close();
+
+    /// <summary>Formats YYYYMM as MM/YYYY for display.</summary>
+    private static string FormatPeriod(string period) =>
+        period.Length == 6
+            ? $"{period[4..6]}/{period[0..4]}"
+            : period;
+
+    private static string FormatAmount(decimal amt) =>
+        amt.ToString("N2");
+}

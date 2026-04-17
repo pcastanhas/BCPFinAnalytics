@@ -1,5 +1,6 @@
 @using BCPFinAnalytics.Common.Enums
 @using BCPFinAnalytics.Common.Models
+@inject IDialogService DialogService
 
 @*
     ReportDisplay — row-type driven financial report renderer.
@@ -74,7 +75,7 @@
                             @if (cell.IsDrillable)
                             {
                                 <span class="drill-link"
-                                      @onclick="() => OnCellClicked(cell.DrillDown!)"
+                                      @onclick="async () => await OnCellClicked(cell.DrillDown!)"
                                       title="Click to view GL detail">
                                     @RenderCellValue(row, col, cell)
                                 </span>
@@ -128,11 +129,23 @@
         };
     }
 
-    private void OnCellClicked(DrillDownRef drillDown)
+    private async Task OnCellClicked(DrillDownRef drillDown)
     {
-        // TODO Phase D — open GL Detail modal
-        // For now just a placeholder — will be wired to GLDetailDialog in Phase D
-        _ = drillDown;
+        var parameters = new DialogParameters
+        {
+            { nameof(GLDetailDialog.DrillDown), drillDown }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey  = true,
+            MaxWidth          = MaxWidth.Large,
+            FullWidth         = true,
+            CloseButton       = true
+        };
+
+        await DialogService.ShowAsync<GLDetailDialog>(
+            "GL Detail", parameters, options);
     }
 
     private string FormatCurrency(decimal value)
