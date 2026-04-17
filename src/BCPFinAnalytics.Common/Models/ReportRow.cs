@@ -31,17 +31,24 @@ public class ReportRow
     public int Indent { get; set; } = 0;
 
     /// <summary>
-    /// Numeric cell values keyed by ColumnId.
-    /// Null values are rendered as blank.
-    /// Use string.Empty sentinel "N/A" logic is handled by the renderer
-    /// based on ColumnDataType.Percent when denominator is zero.
+    /// Cell values keyed by ColumnId (matching ReportColumn.ColumnId).
+    /// Each CellValue bundles the numeric Amount with an optional DrillDownRef.
+    ///
+    /// Non-drillable cells (headers, totals, computed rows):
+    ///   row.Cells[colId] = new CellValue(amount);
+    ///
+    /// Drillable detail cells:
+    ///   row.Cells[colId] = new CellValue(amount, new DrillDownRef { ... });
+    ///
+    /// Missing key or CellValue.Empty renders as blank.
     /// </summary>
-    public Dictionary<string, decimal?> Cells { get; set; } = new();
+    public Dictionary<string, CellValue> Cells { get; set; } = new();
 
     /// <summary>
-    /// Optional override — when set, this text is displayed instead of
-    /// a formatted numeric value for a specific column.
+    /// Optional display override — when set, this text is shown instead of
+    /// the formatted numeric value for a specific column.
     /// Key = ColumnId, Value = display text (e.g. "N/A").
+    /// Takes precedence over Cells[colId].Amount.
     /// </summary>
     public Dictionary<string, string> CellOverrides { get; set; } = new();
 }

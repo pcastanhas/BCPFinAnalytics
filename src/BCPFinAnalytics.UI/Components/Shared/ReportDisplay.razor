@@ -69,8 +69,20 @@
                     </td>
                     @foreach (var col in Result.Columns)
                     {
-                        <td class="numeric">
-                            @RenderCell(row, col)
+                        var cell = row.Cells.TryGetValue(col.ColumnId, out var cv) ? cv : CellValue.Empty;
+                        <td class="numeric @(cell.IsDrillable ? "drillable" : "")">
+                            @if (cell.IsDrillable)
+                            {
+                                <span class="drill-link"
+                                      @onclick="() => OnCellClicked(cell.DrillDown!)"
+                                      title="Click to view GL detail">
+                                    @RenderCellValue(row, col, cell)
+                                </span>
+                            }
+                            else
+                            {
+                                @RenderCellValue(row, col, cell)
+                            }
                         </td>
                     }
                 </tr>
@@ -93,9 +105,9 @@
         _                                   => "row-detail"
     };
 
-    private string RenderCell(ReportRow row, ReportColumn col)
+    private string RenderCellValue(ReportRow row, ReportColumn col, CellValue cell)
     {
-        // Check for display override (e.g. "N/A")
+        // Check for display override (e.g. "N/A") — takes precedence over amount
         if (row.CellOverrides.TryGetValue(col.ColumnId, out var overrideText))
             return overrideText;
 
@@ -103,19 +115,24 @@
         if (row.RowType is RowType.SectionHeader or RowType.SubHeader)
             return string.Empty;
 
-        // Unposted RE row — render normally (it has numeric data)
-
-        if (!row.Cells.TryGetValue(col.ColumnId, out var value) || value == null)
+        if (cell.Amount is null)
             return string.Empty;
 
         return col.DataType switch
         {
-            ColumnDataType.Currency => FormatCurrency(value.Value),
-            ColumnDataType.Percent  => $"{value.Value:N2}%",
-            ColumnDataType.Integer  => $"{value.Value:N0}",
-            ColumnDataType.Text     => value.Value.ToString(),
-            _                       => FormatCurrency(value.Value)
+            ColumnDataType.Currency => FormatCurrency(cell.Amount.Value),
+            ColumnDataType.Percent  => $"{cell.Amount.Value:N2}%",
+            ColumnDataType.Integer  => $"{cell.Amount.Value:N0}",
+            ColumnDataType.Text     => cell.Amount.Value.ToString(),
+            _                       => FormatCurrency(cell.Amount.Value)
         };
+    }
+
+    private void OnCellClicked(DrillDownRef drillDown)
+    {
+        // TODO Phase D — open GL Detail modal
+        // For now just a placeholder — will be wired to GLDetailDialog in Phase D
+        _ = drillDown;
     }
 
     private string FormatCurrency(decimal value)

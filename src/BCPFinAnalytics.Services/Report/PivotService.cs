@@ -58,7 +58,7 @@ public class PivotService : IPivotService
             foreach (var col in columns)
             {
                 var match = group.FirstOrDefault(r => r.ColumnId == col.ColumnId);
-                row.Cells[col.ColumnId] = match?.Value;
+                row.Cells[col.ColumnId] = new CellValue(match?.Value);
             }
 
             reportRows.Add(row);

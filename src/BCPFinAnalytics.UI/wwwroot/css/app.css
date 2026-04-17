@@ -205,3 +205,22 @@ html, body {
 
 /* ── Global loading bar ───────────────────────────────── */
 .global-loading { position: fixed; top: 64px; left: 0; right: 0; z-index: 1300; }
+
+/* ── Drillable cells ──────────────────────────────────── */
+.report-table td.drillable {
+    cursor: pointer;
+}
+
+.drill-link {
+    color: #1565C0;
+    text-decoration: underline dotted;
+    cursor: pointer;
+}
+
+.drill-link:hover {
+    color: #0d47a1;
+    text-decoration: underline solid;
+    background-color: #e3f2fd;
+    border-radius: 2px;
+    padding: 0 2px;
+}
