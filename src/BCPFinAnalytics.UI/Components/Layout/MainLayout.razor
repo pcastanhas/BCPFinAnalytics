@@ -19,7 +19,7 @@
             @AppSettingsOptions.Value.AppName
         </MudText>
         <MudText Typo="Typo.caption" Class="ml-2 mt-1" Style="opacity:0.75;">
-            v@AppSettingsOptions.Value.AppVersion
+            @("v" + AppSettingsOptions.Value.AppVersion)
         </MudText>
         <MudSpacer />
         <SessionBadge />
