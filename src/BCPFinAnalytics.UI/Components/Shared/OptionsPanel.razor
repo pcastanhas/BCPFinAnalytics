@@ -194,12 +194,6 @@
                                            Value="@_options.SelectionMode"
                                            ValueChanged="@OnSelectionModeChanged">
                                 <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
-                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.All"
-                                          Color="Color.Primary"
-                                          Disabled="@(!_config.EntitySelectionEnabled)">
-                                    All
-                                </MudRadio>
-                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
                                           Value="BCPFinAnalytics.Common.Enums.SelectionMode.Include"
                                           Color="Color.Primary"
                                           Disabled="@(!_config.EntitySelectionEnabled)">
@@ -227,7 +221,7 @@
                                                  SelectedIdsChanged="ids => _options.SelectedIds = ids"
                                                  Entities="@_entities"
                                                  Projects="@_projects"
-                                                 Disabled="@(!_config.EntitySelectionEnabled || _options.SelectionMode == BCPFinAnalytics.Common.Enums.SelectionMode.All)" />
+                                                 Disabled="@(!_config.EntitySelectionEnabled)" />
                         </MudItem>
 
                         <!-- Basis multi-select -->
@@ -412,8 +406,6 @@
     private void OnSelectionModeChanged(BCPFinAnalytics.Common.Enums.SelectionMode mode)
     {
         _options.SelectionMode = mode;
-        if (mode == BCPFinAnalytics.Common.Enums.SelectionMode.All)
-            _options.SelectedIds = new();
     }
 
     private async Task OnDisplay()

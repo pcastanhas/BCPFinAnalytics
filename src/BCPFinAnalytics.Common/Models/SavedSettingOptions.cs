@@ -25,7 +25,7 @@ public class SavedSettingOptions
     public bool WholeDollars { get; set; } = false;
     public bool SuppressZeroAccounts { get; set; } = false;
     public bool SuppressInactiveSubtotals { get; set; } = false;
-    public string SelectionMode { get; set; } = "All";
+    public string SelectionMode { get; set; } = "Include";
     public List<string> SelectedIds { get; set; } = new();
     public List<string> Basis { get; set; } = new();
 }

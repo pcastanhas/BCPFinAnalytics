@@ -105,9 +105,6 @@ public class EntityMetaRepository : IEntityMetaRepository
     {
         return selectionMode switch
         {
-            SelectionMode.All =>
-                ($"{selectClause} FROM ENTITY", null),
-
             SelectionMode.Include =>
                 ($"{selectClause} FROM ENTITY WHERE ENTITYID IN @Ids",
                  new { Ids = selectedIds }),

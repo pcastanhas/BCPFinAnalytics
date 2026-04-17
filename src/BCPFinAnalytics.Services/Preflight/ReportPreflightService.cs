@@ -68,10 +68,13 @@ public class ReportPreflightService : IReportPreflightService
         }
 
         // ── Guard: Include/Exclude must have at least 1 ID ────────────
+        // (All mode removed — users must always specify entities explicitly)
         if (options.SelectionMode is SelectionMode.Include or SelectionMode.Exclude
             && options.SelectedIds.Count == 0)
         {
-            var msg = $"{options.SelectionMode} selection requires at least one entity ID.";
+            var mode = options.SelectionMode == SelectionMode.Include ? "Include" : "Exclude";
+            var msg = $"{mode} selection requires at least one entity ID. " +
+                      $"Please select one or more entities.";
             _logger.LogWarning("Preflight failed — {Message}", msg);
             return ServiceResult<bool>.Failure(msg, ErrorCode.ValidationError);
         }

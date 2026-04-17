@@ -13,15 +13,7 @@
 *@
 
 <div class="entity-grid-container">
-
-    @if (Mode == BCPFinAnalytics.Common.Enums.SelectionMode.All)
-    {
-        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-0">
-            All entities/projects will be included.
-        </MudAlert>
-    }
-    else
-    {
+    @{
         <!-- Search box -->
         <MudTextField @bind-Value="_searchText"
                       Placeholder="Search by ID or name..."
@@ -104,7 +96,6 @@
                 </MudText>
             }
         </div>
-    }
 </div>
 
 @code {
@@ -112,7 +103,7 @@
     /// Named 'Mode' rather than 'SelectionMode' to avoid conflict
     /// between the parameter name and the SelectionMode type in Blazor markup.
     /// </summary>
-    [Parameter] public BCPFinAnalytics.Common.Enums.SelectionMode Mode { get; set; } = BCPFinAnalytics.Common.Enums.SelectionMode.All;
+    [Parameter] public BCPFinAnalytics.Common.Enums.SelectionMode Mode { get; set; } = BCPFinAnalytics.Common.Enums.SelectionMode.Include;
     [Parameter] public List<string> SelectedIds { get; set; } = new();
     [Parameter] public EventCallback<List<string>> SelectedIdsChanged { get; set; }
     [Parameter] public List<EntityDto> Entities { get; set; } = new();
@@ -133,7 +124,7 @@
 
     private async Task ToggleItem(string id)
     {
-        if (Disabled || Mode == BCPFinAnalytics.Common.Enums.SelectionMode.All) return;
+        if (Disabled) return;
 
         var current = new List<string>(SelectedIds);
 
