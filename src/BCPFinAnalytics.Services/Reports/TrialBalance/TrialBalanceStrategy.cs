@@ -111,7 +111,7 @@ public class TrialBalanceStrategy : IReportStrategy
         try
         {
             // ── Step 2: Load format definition ────────────────────────────
-            var formatResult = await _formatLoader.LoadAsync(options.DbKey, options.ReportType);
+            var formatResult = await _formatLoader.LoadAsync(options.DbKey, options.Format);
             if (!formatResult.IsSuccess)
                 return ServiceResult<ReportResult>.Failure(
                     formatResult.ErrorMessage, formatResult.ErrorCode);
@@ -539,6 +539,10 @@ public class TrialBalanceStrategy : IReportStrategy
         if (string.IsNullOrWhiteSpace(options.ReportType))
             return ServiceResult<bool>.Failure(
                 "Report Type is required.", ErrorCode.ValidationError);
+
+        if (string.IsNullOrWhiteSpace(options.Format))
+            return ServiceResult<bool>.Failure(
+                "Format is required. Please select a GL format.", ErrorCode.ValidationError);
 
         if (string.IsNullOrWhiteSpace(options.EndPeriod))
             return ServiceResult<bool>.Failure(

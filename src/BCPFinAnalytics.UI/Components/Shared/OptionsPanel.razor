@@ -68,9 +68,9 @@
                                        Margin="Margin.Dense"
                                        Required="true"
                                        AdornmentIcon="@Icons.Material.Filled.Assessment">
-                                @foreach (var f in _formats)
+                                @foreach (var (code, name) in _reportTypes)
                                 {
-                                    <MudSelectItem T="string" Value="@f.Code">@f.DisplayName</MudSelectItem>
+                                    <MudSelectItem T="string" Value="@code">@name</MudSelectItem>
                                 }
                             </MudSelect>
                         </MudItem>
@@ -260,6 +260,7 @@
 
     // ── Lookup data ────────────────────────────────────────
     private List<FormatDto> _formats = new();
+    private List<(string Code, string Name)> _reportTypes = new();
     private List<BudgetDto> _budgets = new();
     private List<SFTypeDto> _sfTypes = new();
     private List<BasisDto> _basisItems = new();
@@ -327,13 +328,16 @@
 
         await Task.WhenAll(tasks);
 
+        // Report types come from registered strategies — not from the database
+        _reportTypes = StrategyResolver.GetAllReportTypes().ToList();
+
         // Default LedgCode to the first GL in the table, per product decision.
         if (string.IsNullOrEmpty(_options.LedgCode) && _gls.Count > 0)
             _options.LedgCode = _gls[0].LedgCode;
 
         Logger.LogInformation(
-            "OptionsPanel lookups loaded — Formats={F} Budgets={B} SFTypes={S} Basis={Ba} Entities={E} Projects={P} GLs={G} SavedSettings={SS} DefaultLedgCode={L}",
-            _formats.Count, _budgets.Count, _sfTypes.Count, _basisItems.Count,
+            "OptionsPanel lookups loaded — ReportTypes={RT} Formats={F} Budgets={B} SFTypes={S} Basis={Ba} Entities={E} Projects={P} GLs={G} SavedSettings={SS} DefaultLedgCode={L}",
+            _reportTypes.Count, _formats.Count, _budgets.Count, _sfTypes.Count, _basisItems.Count,
             _entities.Count, _projects.Count, _gls.Count, _savedSettings.Count, _options.LedgCode);
     }
 

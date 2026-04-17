@@ -106,7 +106,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
         try
         {
             // ── Step 2: Load format ────────────────────────────────────────
-            var formatResult = await _formatLoader.LoadAsync(options.DbKey, options.ReportType);
+            var formatResult = await _formatLoader.LoadAsync(options.DbKey, options.Format);
             if (!formatResult.IsSuccess)
                 return ServiceResult<ReportResult>.Failure(
                     formatResult.ErrorMessage, formatResult.ErrorCode);
