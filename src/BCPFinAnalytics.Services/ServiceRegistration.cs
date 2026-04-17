@@ -11,6 +11,7 @@ using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.GlDetail;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Reports.TrialBalance;
+using BCPFinAnalytics.Services.Reports.TrialBalanceDC;
 using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;
 using Microsoft.Extensions.Configuration;
@@ -63,6 +64,8 @@ public static class ServiceRegistration
         // ──────────────────────────────────────────────
         services.AddScoped<ITrialBalanceRepository, TrialBalanceRepository>();
         services.AddScoped<IReportStrategy, TrialBalanceStrategy>();
+        services.AddScoped<ITrialBalanceDCRepository, TrialBalanceDCRepository>();
+        services.AddScoped<IReportStrategy, TrialBalanceDCStrategy>();
         services.AddScoped<IGlDetailService, GlDetailService>();
 
         // ──────────────────────────────────────────────
