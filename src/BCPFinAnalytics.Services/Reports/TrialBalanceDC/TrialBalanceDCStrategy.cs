@@ -198,7 +198,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
                 acct => acct,
                 acct =>
                 {
-                    var meta     = acctMeta.TryGetValue(acct, out var m) ? m : ("", "");
+                    var meta = acctMeta.TryGetValue(acct, out var m) ? m : (AcctName: "", Type: "");
                     var starting = startingByAcct.TryGetValue(acct, out var sv) ? sv : 0m;
                     var activity = activityByAcct.TryGetValue(acct, out var av) ? av : 0m;
                     return new AcctAggregate(meta.AcctName, meta.Type, starting, activity);
