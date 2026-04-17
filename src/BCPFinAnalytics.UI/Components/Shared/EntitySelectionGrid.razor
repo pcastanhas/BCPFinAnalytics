@@ -153,7 +153,6 @@
     /// <summary>Validates selection based on current mode.</summary>
     public bool IsValid => Mode switch
     {
-        BCPFinAnalytics.Common.Enums.SelectionMode.All     => true,
         BCPFinAnalytics.Common.Enums.SelectionMode.Include => SelectedIds.Any(),
         BCPFinAnalytics.Common.Enums.SelectionMode.Exclude => SelectedIds.Any(),
         BCPFinAnalytics.Common.Enums.SelectionMode.Range   => SelectedIds.Count == 2,

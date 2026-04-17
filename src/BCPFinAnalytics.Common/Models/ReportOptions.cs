@@ -31,8 +31,8 @@ public class ReportOptions
     /// <summary>Selected square footage type from SQTY.</summary>
     public string SFType { get; set; } = string.Empty;
 
-    /// <summary>Controls how SelectedIds is interpreted — All, Include, Exclude, or Range.</summary>
-    public SelectionMode SelectionMode { get; set; } = SelectionMode.All;
+    /// <summary>Controls how SelectedIds is interpreted — Include, Exclude, or Range.</summary>
+    public SelectionMode SelectionMode { get; set; } = SelectionMode.Include;
 
     /// <summary>
     /// Entity or project IDs entered by the user.
