@@ -23,7 +23,7 @@
 
 <MudExpansionPanels Class="options-panel mb-3" Elevation="2">
     <MudExpansionPanel Text="Report Options"
-                       Expanded="true"
+                       @bind-Expanded="_panelExpanded"
                        Icon="@Icons.Material.Filled.Tune">
 
         @if (_loading)
@@ -275,6 +275,7 @@
     private ReportOptionsConfig _config = ReportOptionsConfig.AllEnabled();
     private int? _selectedSettingId = null;
     private bool _loading = true;
+    private bool _panelExpanded = true;
 
     public enum OutputFormat { Screen, Excel, Pdf }
 
@@ -289,50 +290,38 @@
 
     private async Task LoadLookupsAsync()
     {
-        var tasks = new[]
-        {
-            LookupService.GetFormatsAsync(UserSession.DbKey).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _formats = t.Result.Data!.ToList();
-                else AlertSvc.AddError($"Failed to load formats: {t.Result.ErrorMessage}");
-            }),
-            LookupService.GetBudgetsAsync(UserSession.DbKey).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _budgets = t.Result.Data!.ToList();
-            }),
-            LookupService.GetSFTypesAsync(UserSession.DbKey).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _sfTypes = t.Result.Data!.ToList();
-            }),
-            LookupService.GetBasisAsync(UserSession.DbKey).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _basisItems = t.Result.Data!.ToList();
-            }),
-            LookupService.GetEntitiesAsync(UserSession.DbKey).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _entities = t.Result.Data!.ToList();
-            }),
-            LookupService.GetProjectsAsync(UserSession.DbKey).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _projects = t.Result.Data!.ToList();
-            }),
-            LookupService.GetGLsAsync(UserSession.DbKey).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _gls = t.Result.Data!.ToList();
-                else AlertSvc.AddError($"Failed to load GLs: {t.Result.ErrorMessage}");
-            }),
-            SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId).ContinueWith(t =>
-            {
-                if (t.Result.IsSuccess) _savedSettings = t.Result.Data!.ToList();
-            })
-        };
+        // Sequential awaits keep everything on the Blazor dispatcher —
+        // avoids threading issues from Task.WhenAll + ContinueWith mutations.
+        var r1 = await LookupService.GetFormatsAsync(UserSession.DbKey);
+        if (r1.IsSuccess) _formats = r1.Data!.ToList();
+        else AlertSvc.AddError($"Failed to load formats: {r1.ErrorMessage}");
 
-        await Task.WhenAll(tasks);
+        var r2 = await LookupService.GetBudgetsAsync(UserSession.DbKey);
+        if (r2.IsSuccess) _budgets = r2.Data!.ToList();
 
-        // Report types come from registered strategies — not from the database
+        var r3 = await LookupService.GetSFTypesAsync(UserSession.DbKey);
+        if (r3.IsSuccess) _sfTypes = r3.Data!.ToList();
+
+        var r4 = await LookupService.GetBasisAsync(UserSession.DbKey);
+        if (r4.IsSuccess) _basisItems = r4.Data!.ToList();
+
+        var r5 = await LookupService.GetEntitiesAsync(UserSession.DbKey);
+        if (r5.IsSuccess) _entities = r5.Data!.ToList();
+
+        var r6 = await LookupService.GetProjectsAsync(UserSession.DbKey);
+        if (r6.IsSuccess) _projects = r6.Data!.ToList();
+
+        var r7 = await LookupService.GetGLsAsync(UserSession.DbKey);
+        if (r7.IsSuccess) _gls = r7.Data!.ToList();
+        else AlertSvc.AddError($"Failed to load GLs: {r7.ErrorMessage}");
+
+        var r8 = await SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId);
+        if (r8.IsSuccess) _savedSettings = r8.Data!.ToList();
+
+        // Report types from registered strategies — not from the database
         _reportTypes = StrategyResolver.GetAllReportTypes().ToList();
 
-        // Default LedgCode to the first GL in the table, per product decision.
+        // Default LedgCode to first GL
         if (string.IsNullOrEmpty(_options.LedgCode) && _gls.Count > 0)
             _options.LedgCode = _gls[0].LedgCode;
 
