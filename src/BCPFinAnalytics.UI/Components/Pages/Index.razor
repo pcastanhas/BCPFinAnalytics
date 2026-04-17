@@ -14,8 +14,7 @@
     IsValid=@UserSession.IsValid |
     DbKey=@UserSession.DbKey |
     UserId=@UserSession.UserId |
-    Error=@_sessionError |
-    URI=@NavigationManager.Uri
+    Error=@_sessionError
 </div>
 
 @if (!_sessionInitialized)
@@ -31,9 +30,7 @@ else if (!UserSession.IsValid)
         <MudText Typo="Typo.body2" Class="mt-1">
             Expected URL format: <strong>BCPFinAnalytics?db=PROD&amp;userid=username</strong>
         </MudText>
-        <MudText Typo="Typo.caption" Class="mt-1" Color="Color.Secondary">
-            Current URL: @NavigationManager.Uri
-        </MudText>
+        <MudText Typo="Typo.caption" Class="mt-1">URL: @NavigationManager.Uri</MudText>
     </MudAlert>
 }
 else
@@ -45,17 +42,15 @@ else
     private bool _sessionInitialized = false;
     private string _sessionError = string.Empty;
 
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    protected override void OnInitialized()
     {
-        if (!firstRender) return;
-
         var uri   = new Uri(NavigationManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var db     = query["db"]?.Trim();
         var userId = query["userid"]?.Trim();
 
         Logger.LogInformation(
-            "Index.OnAfterRenderAsync — db={DbKey} userid={UserId} Uri={Uri}",
+            "Index.OnInitialized — db={DbKey} userid={UserId} Uri={Uri}",
             db ?? "(missing)", userId ?? "(missing)", NavigationManager.Uri);
 
         var result = UserSession.Initialize(db, userId);
@@ -72,6 +67,5 @@ else
         }
 
         _sessionInitialized = true;
-        StateHasChanged();
     }
 }
