@@ -7,6 +7,17 @@
 
 <PageTitle>BCPFinAnalytics</PageTitle>
 
+@* ── Diagnostic strip — remove once working ── *@
+<div style="background:#fffbe6;border:1px solid #f0ad4e;padding:8px 12px;font-size:12px;font-family:monospace;margin-bottom:8px;">
+    <strong>Diagnostics:</strong>
+    Initialized=@_sessionInitialized |
+    IsValid=@UserSession.IsValid |
+    DbKey=@UserSession.DbKey |
+    UserId=@UserSession.UserId |
+    Error=@_sessionError |
+    URI=@NavigationManager.Uri
+</div>
+
 @if (!_sessionInitialized)
 {
     <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
@@ -31,7 +42,6 @@ else
 }
 
 @code {
-
     private bool _sessionInitialized = false;
     private string _sessionError = string.Empty;
 
@@ -39,16 +49,13 @@ else
     {
         if (!firstRender) return;
 
-        // OnAfterRenderAsync fires after the interactive circuit is connected,
-        // so NavigationManager.Uri reliably contains the full URL with query params.
-        var uri = new Uri(NavigationManager.Uri);
+        var uri   = new Uri(NavigationManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
-
         var db     = query["db"]?.Trim();
         var userId = query["userid"]?.Trim();
 
         Logger.LogInformation(
-            "BCPFinAnalytics session initializing — db={DbKey} userid={UserId} Uri={Uri}",
+            "Index.OnAfterRenderAsync — db={DbKey} userid={UserId} Uri={Uri}",
             db ?? "(missing)", userId ?? "(missing)", NavigationManager.Uri);
 
         var result = UserSession.Initialize(db, userId);
@@ -56,14 +63,11 @@ else
         if (!result.IsSuccess)
         {
             _sessionError = result.ErrorMessage;
-            Logger.LogWarning(
-                "BCPFinAnalytics session failed — {Error} — db={DbKey} userid={UserId}",
-                result.ErrorMessage, db ?? "(missing)", userId ?? "(missing)");
+            Logger.LogWarning("Session init failed — {Error}", result.ErrorMessage);
         }
         else
         {
-            Logger.LogInformation(
-                "BCPFinAnalytics session OK — db={DbKey} userid={UserId}",
+            Logger.LogInformation("Session OK — db={DbKey} userid={UserId}",
                 UserSession.DbKey, UserSession.UserId);
         }
 
