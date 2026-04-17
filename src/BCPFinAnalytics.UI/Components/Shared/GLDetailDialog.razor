@@ -5,6 +5,7 @@
 @inject IGlDetailService GlDetailService
 @inject UserSessionService UserSession
 @inject ISnackbar Snackbar
+@inject BCPFinAnalytics.UI.Services.AlertService AlertSvc
 @inject ILogger<GLDetailDialog> Logger
 @inject IJSRuntime JS
 
@@ -191,7 +192,7 @@
         {
             Logger.LogError(
                 "GLDetailDialog load failed — {Error}", result.ErrorMessage);
-            Snackbar.Add($"Failed to load GL detail: {result.ErrorMessage}", Severity.Error);
+            AlertSvc.AddError($"Failed to load GL detail: {result.ErrorMessage}");
         }
 
         _loading = false;
@@ -224,7 +225,7 @@
         catch (Exception ex)
         {
             Logger.LogError(ex, "GLDetailDialog Excel export failed");
-            Snackbar.Add("Excel export failed.", Severity.Error);
+            AlertSvc.AddError("Excel export failed.");
         }
         finally
         {

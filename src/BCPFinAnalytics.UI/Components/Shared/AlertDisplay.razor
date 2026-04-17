@@ -1,0 +1,53 @@
+@using BCPFinAnalytics.UI.Services
+@inject AlertService AlertService
+@implements IDisposable
+
+@if (AlertService.Alerts.Any())
+{
+    <div class="alert-stack">
+        @foreach (var alert in AlertService.Alerts)
+        {
+            <div class="app-alert app-alert-@alert.Level.ToString().ToLower()">
+                <div class="app-alert-icon">
+                    @switch (alert.Level)
+                    {
+                        case AlertLevel.Error:
+                            <MudIcon Icon="@Icons.Material.Filled.Error" />
+                            break;
+                        case AlertLevel.Warning:
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" />
+                            break;
+                        case AlertLevel.Info:
+                            <MudIcon Icon="@Icons.Material.Filled.Info" />
+                            break;
+                        case AlertLevel.Success:
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" />
+                            break;
+                    }
+                </div>
+                <div class="app-alert-message">
+                    <strong>@alert.Level.ToString():</strong> @alert.Message
+                </div>
+                <button class="app-alert-dismiss"
+                        @onclick="() => AlertService.Dismiss(alert.Id)"
+                        title="Dismiss">
+                    &times;
+                </button>
+            </div>
+        }
+        @if (AlertService.Alerts.Count > 1)
+        {
+            <div class="app-alert-dismissall">
+                <button @onclick="AlertService.DismissAll">Dismiss all</button>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    protected override void OnInitialized()
+        => AlertService.OnChange += StateHasChanged;
+
+    public void Dispose()
+        => AlertService.OnChange -= StateHasChanged;
+}

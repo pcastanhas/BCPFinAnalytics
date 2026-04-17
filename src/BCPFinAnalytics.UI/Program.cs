@@ -1,4 +1,5 @@
 using BCPFinAnalytics.Services;
+using BCPFinAnalytics.UI.Services;
 using MudBlazor.Services;
 using Serilog;
 
@@ -40,6 +41,7 @@ try
     //  MudBlazor
     // ──────────────────────────────────────────────
     builder.Services.AddMudServices();
+    builder.Services.AddScoped<AlertService>();
 
     // ──────────────────────────────────────────────
     //  HttpContextAccessor — needed for URL param capture

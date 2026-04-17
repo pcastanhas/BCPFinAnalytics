@@ -8,6 +8,7 @@
 @inject IPdfRenderer PdfRenderer
 @inject UserSessionService UserSession
 @inject ISnackbar Snackbar
+@inject BCPFinAnalytics.UI.Services.AlertService AlertSvc
 @inject ILogger<ReportPage> Logger
 @inject BCPFinAnalytics.Services.Preflight.IReportPreflightService PreflightService
 @inject IJSRuntime JS
@@ -86,7 +87,7 @@ else if (_hasRun && !_isRunning)
             {
                 Logger.LogError("Report execution failed — ReportType={ReportType} Error={Error}",
                     options.ReportType, result.ErrorMessage);
-                Snackbar.Add($"Report failed: {result.ErrorMessage}", Severity.Error);
+                AlertSvc.AddError($"Report failed: {result.ErrorMessage}");
                 return;
             }
 
@@ -110,12 +111,12 @@ else if (_hasRun && !_isRunning)
         catch (InvalidOperationException ex)
         {
             Logger.LogError(ex, "No strategy found for {ReportType}", options.ReportType);
-            Snackbar.Add(ex.Message, Severity.Error);
+            AlertSvc.AddError(ex.Message);
         }
         catch (Exception ex)
         {
             Logger.LogError(ex, "Unexpected report error — ReportType={ReportType}", options.ReportType);
-            Snackbar.Add("An unexpected error occurred. Please try again.", Severity.Error);
+            AlertSvc.AddError("An unexpected error occurred. Please try again.");
         }
         finally
         {
@@ -136,7 +137,7 @@ else if (_hasRun && !_isRunning)
         catch (Exception ex)
         {
             Logger.LogError(ex, "Excel render failed");
-            Snackbar.Add("Excel export failed.", Severity.Error);
+            AlertSvc.AddError("Excel export failed.");
         }
     }
 
@@ -151,7 +152,7 @@ else if (_hasRun && !_isRunning)
         catch (Exception ex)
         {
             Logger.LogError(ex, "PDF render failed");
-            Snackbar.Add("PDF export failed.", Severity.Error);
+            AlertSvc.AddError("PDF export failed.");
         }
     }
 
