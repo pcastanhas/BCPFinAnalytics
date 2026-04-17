@@ -6,6 +6,7 @@
 @inject UserSessionService UserSession
 @inject ISnackbar Snackbar
 @inject ILogger<GLDetailDialog> Logger
+@inject IJSRuntime JS
 
 @*
     GLDetailDialog — GL transaction drill-down modal.
@@ -127,6 +128,16 @@
     </DialogContent>
 
     <DialogActions>
+        @if (_rows.Count > 0)
+        {
+            <MudButton OnClick="ExportExcel"
+                       Variant="Variant.Filled"
+                       Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.TableChart"
+                       Disabled="@_exporting">
+                @(_exporting ? "Exporting..." : "Excel")
+            </MudButton>
+        }
         <MudButton OnClick="Close"
                    Variant="Variant.Text"
                    Color="Color.Default">
@@ -196,4 +207,97 @@
 
     private static string FormatAmount(decimal amt) =>
         amt.ToString("N2");
+
+    private bool _exporting = false;
+
+    private async Task ExportExcel()
+    {
+        _exporting = true;
+        try
+        {
+            var bytes = BuildDetailExcel();
+            var fileName = $"GLDetail_{DrillDown.PeriodFrom}-{DrillDown.PeriodTo}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            var base64 = Convert.ToBase64String(bytes);
+            await JS.InvokeVoidAsync("downloadFile", fileName,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "GLDetailDialog Excel export failed");
+            Snackbar.Add("Excel export failed.", Severity.Error);
+        }
+        finally
+        {
+            _exporting = false;
+        }
+    }
+
+    private byte[] BuildDetailExcel()
+    {
+        using var wb = new ClosedXML.Excel.XLWorkbook();
+        var ws = wb.Worksheets.Add("GL Detail");
+
+        // Title rows
+        ws.Cell(1, 1).Value = $"GL Detail — {DrillDown.DisplayLabel}";
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 12;
+        ws.Cell(2, 1).Value = $"Period: {DrillDown.PeriodFrom} – {DrillDown.PeriodTo}   Entities: {string.Join(", ", DrillDown.EntityIds)}";
+        ws.Cell(2, 1).Style.Font.FontSize = 9;
+        ws.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.Gray;
+
+        // Column headers (row 4)
+        var headers = new[] { "Period", "Ref", "Source", "Basis", "Entity",
+                               "Account", "Dept", "Item", "Job", "Date", "Description", "Amount" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            var hCell = ws.Cell(4, i + 1);
+            hCell.Value = headers[i];
+            hCell.Style.Font.Bold = true;
+            hCell.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#D9E1F2");
+            hCell.Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Medium;
+        }
+
+        // Data rows starting at row 5
+        int row = 5;
+        foreach (var r in _rows)
+        {
+            ws.Cell(row, 1).Value  = FormatPeriod(r.Period);
+            ws.Cell(row, 2).Value  = r.Ref;
+            ws.Cell(row, 3).Value  = r.Source;
+            ws.Cell(row, 4).Value  = r.Basis;
+            ws.Cell(row, 5).Value  = r.EntityId;
+            ws.Cell(row, 6).Value  = r.AcctNum.Trim();
+            ws.Cell(row, 7).Value  = r.Department;
+            ws.Cell(row, 8).Value  = r.Item;
+            ws.Cell(row, 9).Value  = r.JobCode;
+            ws.Cell(row, 10).Value = r.EntrDate?.ToString("MM/dd/yyyy") ?? "";
+            ws.Cell(row, 11).Value = r.Descrpn;
+
+            var amtCell = ws.Cell(row, 12);
+            amtCell.Value = (double)r.Amt;
+            amtCell.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+            amtCell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+            row++;
+        }
+
+        // Total row
+        ws.Cell(row, 11).Value = "Total";
+        ws.Cell(row, 11).Style.Font.Bold = true;
+        var totalCell = ws.Cell(row, 12);
+        totalCell.Value = (double)_rows.Sum(r => r.Amt);
+        totalCell.Style.Font.Bold = true;
+        totalCell.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+        totalCell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+        totalCell.Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+        // Column widths
+        ws.Column(11).Width = 40;
+        ws.Column(12).Width = 16;
+        ws.Columns(1, 10).AdjustToContents();
+        ws.SheetView.Freeze(4, 0);
+
+        using var ms = new System.IO.MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
+    }
 }
