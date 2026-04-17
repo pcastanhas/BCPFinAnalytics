@@ -1,6 +1,7 @@
 using BCPFinAnalytics.DAL;
 using BCPFinAnalytics.DAL.Interfaces;
 using BCPFinAnalytics.DAL.Repositories;
+using BCPFinAnalytics.Common.Interfaces;
 using BCPFinAnalytics.Services.Interfaces;
 using BCPFinAnalytics.Services.Lookup;
 using BCPFinAnalytics.Services.Rendering;

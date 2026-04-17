@@ -365,7 +365,7 @@ public class TrialBalanceStrategy : IReportStrategy
     /// </summary>
     private List<ReportRow> BuildRangeRows(
         FormatRow fmtRow,
-        Dictionary<string, dynamic> balanceByAcct,
+        Dictionary<string, AcctAggregate> balanceByAcct,
         GlQueryParameters glParams,
         GLDto glInfo,
         bool wholeDollars,
@@ -424,7 +424,7 @@ public class TrialBalanceStrategy : IReportStrategy
     /// </summary>
     private ReportRow? BuildSummaryRow(
         FormatRow fmtRow,
-        Dictionary<string, dynamic> balanceByAcct,
+        Dictionary<string, AcctAggregate> balanceByAcct,
         GlQueryParameters glParams,
         bool wholeDollars,
         ref decimal groupTotal)
