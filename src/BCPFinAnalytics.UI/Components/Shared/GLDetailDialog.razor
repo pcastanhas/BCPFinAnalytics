@@ -106,7 +106,7 @@
                                 <td class="mono">@row.Item</td>
                                 <td>@row.JobCode</td>
                                 <td>@(row.EntrDate?.ToString("MM/dd/yy") ?? "")</td>
-                                <td class="descrptn">@row.Descrptn</td>
+                                <td class="descrptn">@row.Descrpn</td>
                                 <td class="amount @(row.Amt < 0 ? "negative" : "")">
                                     @FormatAmount(row.Amt)
                                 </td>

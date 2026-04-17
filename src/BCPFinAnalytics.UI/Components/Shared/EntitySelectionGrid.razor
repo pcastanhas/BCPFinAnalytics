@@ -13,7 +13,6 @@
 *@
 
 <div class="entity-grid-container">
-    @{
         <!-- Search box -->
         <MudTextField @bind-Value="_searchText"
                       Placeholder="Search by ID or name..."
@@ -97,7 +96,6 @@
             }
         </div>
 </div>
-
 @code {
     /// <summary>
     /// Named 'Mode' rather than 'SelectionMode' to avoid conflict
