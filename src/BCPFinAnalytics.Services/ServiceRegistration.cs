@@ -6,8 +6,6 @@ using BCPFinAnalytics.Services.Lookup;
 using BCPFinAnalytics.Services.Rendering;
 using BCPFinAnalytics.Services.Report;
 using BCPFinAnalytics.Services.Session;
-using BCPFinAnalytics.Services.GlDetail;
-using BCPFinAnalytics.Services.GLDetail;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Preflight;
@@ -37,7 +35,6 @@ public static class ServiceRegistration
         services.AddScoped<IFormatRepository, FormatRepository>();
         services.AddScoped<IBalForRepository, BalForRepository>();
         services.AddScoped<IUnpostedRERepository, UnpostedRERepository>();
-        services.AddScoped<IGLDetailRepository, GLDetailRepository>();
         services.AddScoped<IGlDetailRepository, GlDetailRepository>();
 
         // ──────────────────────────────────────────────
@@ -57,7 +54,6 @@ public static class ServiceRegistration
         services.AddScoped<EntitySelectionResolver>();
         services.AddScoped<GlFilterBuilder>();
         services.AddScoped<IUnpostedREService, UnpostedREService>();
-        services.AddScoped<IGLDetailService, GLDetailService>();
         services.AddScoped<IGlDetailService, GlDetailService>();
 
         // ──────────────────────────────────────────────

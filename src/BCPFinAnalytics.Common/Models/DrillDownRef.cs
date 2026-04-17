@@ -1,40 +1,45 @@
 namespace BCPFinAnalytics.Common.Models;
 
 /// <summary>
-/// Identifies the GL data behind a specific report cell.
-/// Passed to the GL Detail modal when the user clicks a drillable cell.
+/// Identifies the GL transaction data behind a drillable report cell.
+/// Passed to the GL Detail modal when the user clicks a Detail row cell.
 ///
-/// Supports both simple and consolidated reports:
-///   - Single entity, single account   (simple report, one entity column)
-///   - Multiple entities, single account  (consolidated column)
-///   - Single entity, multiple accounts   (detail row spanning account range)
-///   - Multiple entities, multiple accounts (consolidated + account range)
+/// Supports consolidated reports — AcctNums and EntityIds are both lists
+/// because a single displayed cell may aggregate multiple accounts and/or
+/// multiple entities into one number.
 ///
-/// Only Detail rows carry a DrillDownRef. Total, subtotal, header, and
-/// UnpostedRetainedEarnings rows always have DrillDown = null.
+/// Only RowType.Detail cells carry a non-null DrillDownRef.
+/// Total, GrandTotal, SectionHeader, SubHeader, and UnpostedRetainedEarnings
+/// rows are never drillable.
 ///
-/// All fields needed to reconstruct the JOURNAL/GHIS UNION ALL query are
-/// carried here — the modal never re-derives context from the parent report.
+/// BASIS EXPANSION RULE (applied by the repository, not the UI):
+///   If BasisList contains 'A' or 'C', the query also includes 'B' rows.
+///   This matches MRI convention — accrual/cash selections always include
+///   the 'Both' basis transactions.
 /// </summary>
 public sealed record DrillDownRef
 {
     /// <summary>
-    /// One or more raw account numbers to include in the drill query.
-    /// Always the trimmed ACCTNUM values (before display formatting).
-    /// A Detail row that summarises a range of accounts passes all of them here.
+    /// Raw account number(s) — e.g. ["MR063100000"].
+    /// One entry for a single-account detail row.
+    /// Multiple entries when the row summarises several accounts
+    /// (e.g. a detail row that rolls up a sub-group).
+    /// Always raw ACCTNUM values — display formatting is applied by the modal.
     /// </summary>
     public IReadOnlyList<string> AcctNums { get; init; } = Array.Empty<string>();
 
     /// <summary>
-    /// One or more entity IDs included in this cell's value.
-    /// Single-entity reports pass one ID; consolidated reports pass all
-    /// entities that were summed into this cell.
+    /// Entity ID(s) contributing to this cell's value.
+    /// One entry for single-entity reports.
+    /// Multiple entries for consolidated reports where several entities
+    /// are summed into a single displayed column.
     /// </summary>
     public IReadOnlyList<string> EntityIds { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Start period for this cell's data range in YYYYMM format.
-    /// For income accounts this is BEGYRPD; for balance accounts this is BALFORPD.
+    /// For income accounts (TYPE='I') this is BEGYRPD.
+    /// For balance accounts (TYPE='B'/'C') this is BALFORPD.
     /// </summary>
     public string PeriodFrom { get; init; } = string.Empty;
 
@@ -43,19 +48,17 @@ public sealed record DrillDownRef
 
     /// <summary>
     /// User-selected basis values (e.g. ["A"] or ["C"] or ["A","C"]).
-    /// The GL Detail repository applies the basis expansion rule:
-    ///   if A or C is in the list, B is automatically added to the query.
-    /// This matches the behaviour of the provided JOURNAL/GHIS query template.
+    /// The repository applies the expansion rule:
+    ///   if list contains 'A' or 'C' → also query BASIS='B' rows.
     /// </summary>
     public IReadOnlyList<string> BasisList { get; init; } = Array.Empty<string>();
 
     /// <summary>
     /// Display label shown in the modal header.
-    /// Pre-formatted by the report strategy so the modal needs no derivation.
-    /// Examples:
-    ///   "401-0005 · RESIDENTIAL RENT - GROSS"
-    ///   "401-0000 · RESIDENTIAL RENT INCOME (3 accounts)"
-    ///   "Consolidated · 401-0005 · RESIDENTIAL RENT - GROSS (4 entities)"
+    /// Pre-formatted by the report strategy — e.g.
+    ///   "401-0005 · RESIDENTIAL RENT - GROSS"          (single account)
+    ///   "RESIDENTIAL RENT INCOME (4 accounts)"          (multi-account)
+    /// The modal never needs to re-derive this.
     /// </summary>
     public string DisplayLabel { get; init; } = string.Empty;
 }

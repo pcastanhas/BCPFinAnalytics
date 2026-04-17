@@ -1,21 +1,26 @@
-using BCPFinAnalytics.Common.DTOs;
 using BCPFinAnalytics.Common.Models;
 
 namespace BCPFinAnalytics.DAL.Interfaces;
 
 /// <summary>
-/// Retrieves GL transaction detail for the drill-down modal.
-/// Queries JOURNAL (open periods) UNION ALL GHIS (closed periods).
+/// Provides GL transaction detail for the drill-down modal.
+/// Queries JOURNAL (open periods) and GHIS (closed periods) via UNION ALL.
+///
+/// JOURNAL: STATUS = 'P' (posted only — 'U' = unposted, never shown in drill-down)
+/// GHIS:    BALFOR = 'N' (activity rows only — beginning balance rows excluded)
+///
+/// BASIS EXPANSION RULE:
+///   If BasisList contains 'A' or 'C', 'B' rows are automatically included.
+///   Applied here in the repository, not by the caller.
 /// </summary>
 public interface IGlDetailRepository
 {
     /// <summary>
-    /// Returns all posted journal entry lines matching the drill-down context.
-    ///
-    /// Basis expansion rule is applied internally:
-    ///   if A or C appears in drillDown.BasisList, B is automatically added.
-    ///
-    /// Results are ordered by Period, Ref, Item — matching the MRI standard.
+    /// Returns all posted GL transactions matching the drill-down context,
+    /// from both open (JOURNAL) and closed (GHIS) periods.
+    /// Ordered by period, ref, item — the natural JE entry order.
     /// </summary>
-    Task<IEnumerable<GlDetailRow>> GetDetailAsync(string dbKey, DrillDownRef drillDown);
+    Task<IEnumerable<GlDetailRow>> GetDetailAsync(
+        string dbKey,
+        DrillDownRef drillDown);
 }
