@@ -9,24 +9,24 @@
 
 @if (!_sessionInitialized)
 {
-    <!-- Loading state while session initializes -->
     <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-4" />
     <MudText Typo="Typo.body1" Class="pa-4">Initializing session...</MudText>
 }
 else if (!UserSession.IsValid)
 {
-    <!-- Invalid / missing URL parameters -->
     <MudAlert Severity="Severity.Error" Class="ma-4" Elevation="2">
         <MudText Typo="Typo.h6">Session Error</MudText>
         <MudText Typo="Typo.body1" Class="mt-2">@_sessionError</MudText>
         <MudText Typo="Typo.body2" Class="mt-1">
             Expected URL format: <strong>BCPFinAnalytics?db=PROD&amp;userid=username</strong>
         </MudText>
+        <MudText Typo="Typo.caption" Class="mt-1" Color="Color.Secondary">
+            Current URL: @NavigationManager.Uri
+        </MudText>
     </MudAlert>
 }
 else
 {
-    <!-- Valid session — render the report page -->
     <ReportPage />
 }
 
@@ -35,21 +35,20 @@ else
     private bool _sessionInitialized = false;
     private string _sessionError = string.Empty;
 
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // ──────────────────────────────────────────────
-        //  Parse URL query string parameters
-        //  db=   → connection string key
-        //  userid= → MRI user identity
-        // ──────────────────────────────────────────────
+        if (!firstRender) return;
+
+        // OnAfterRenderAsync fires after the interactive circuit is connected,
+        // so NavigationManager.Uri reliably contains the full URL with query params.
         var uri = new Uri(NavigationManager.Uri);
         var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
 
-        var db = query["db"]?.Trim();
+        var db     = query["db"]?.Trim();
         var userId = query["userid"]?.Trim();
 
         Logger.LogInformation(
-            "BCPFinAnalytics session initializing — db={DbKey} userid={UserId} from {Uri}",
+            "BCPFinAnalytics session initializing — db={DbKey} userid={UserId} Uri={Uri}",
             db ?? "(missing)", userId ?? "(missing)", NavigationManager.Uri);
 
         var result = UserSession.Initialize(db, userId);
@@ -58,16 +57,17 @@ else
         {
             _sessionError = result.ErrorMessage;
             Logger.LogWarning(
-                "BCPFinAnalytics session initialization failed — {Error} — db={DbKey} userid={UserId}",
+                "BCPFinAnalytics session failed — {Error} — db={DbKey} userid={UserId}",
                 result.ErrorMessage, db ?? "(missing)", userId ?? "(missing)");
         }
         else
         {
             Logger.LogInformation(
-                "BCPFinAnalytics session initialized successfully — db={DbKey} userid={UserId}",
+                "BCPFinAnalytics session OK — db={DbKey} userid={UserId}",
                 UserSession.DbKey, UserSession.UserId);
         }
 
         _sessionInitialized = true;
+        StateHasChanged();
     }
 }
