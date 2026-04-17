@@ -7,6 +7,8 @@ using BCPFinAnalytics.Services.Rendering;
 using BCPFinAnalytics.Services.Report;
 using BCPFinAnalytics.Services.Session;
 using BCPFinAnalytics.Services.GlDetail;
+using BCPFinAnalytics.Services.GLDetail;
+using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;
 using Microsoft.Extensions.Configuration;
@@ -31,6 +33,8 @@ public static class ServiceRegistration
         services.AddScoped<ILookupRepository, LookupRepository>();
         services.AddScoped<ISavedSettingsRepository, SavedSettingsRepository>();
         services.AddScoped<IEntityMetaRepository, EntityMetaRepository>();
+        services.AddScoped<IFormatRepository, FormatRepository>();
+        services.AddScoped<IGLDetailRepository, GLDetailRepository>();
         services.AddScoped<IGlDetailRepository, GlDetailRepository>();
 
         // ──────────────────────────────────────────────
@@ -46,6 +50,8 @@ public static class ServiceRegistration
         services.AddScoped<IReportStrategyResolver, ReportStrategyResolver>();
         services.AddScoped<IPivotService, PivotService>();
         services.AddScoped<IReportPreflightService, ReportPreflightService>();
+        services.AddScoped<IFormatLoader, FormatLoader>();
+        services.AddScoped<IGLDetailService, GLDetailService>();
         services.AddScoped<IGlDetailService, GlDetailService>();
 
         // ──────────────────────────────────────────────
