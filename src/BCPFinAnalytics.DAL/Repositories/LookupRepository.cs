@@ -232,7 +232,8 @@ public class LookupRepository : ILookupRepository
                 LEDGCODE                                              AS LedgCode,
                 '(' + RTRIM(LEDGCODE) + ') ' + RTRIM(DESCRPTN)       AS DisplayName,
                 ACCTLGT                                               AS AcctLgt,
-                RTRIM(ACCTDSP)                                        AS AcctDsp
+                RTRIM(ACCTDSP)                                        AS AcctDsp,
+                RTRIM(ISNULL(REARNACC,''))                            AS ReArnAcct
             FROM GLCD
             ORDER BY LEDGCODE
             """;

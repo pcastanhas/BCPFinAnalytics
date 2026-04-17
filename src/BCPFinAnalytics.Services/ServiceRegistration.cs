@@ -9,6 +9,7 @@ using BCPFinAnalytics.Services.Session;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.GlDetail;
 using BCPFinAnalytics.Services.Helpers;
+using BCPFinAnalytics.Services.Reports.TrialBalance;
 using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;
 using Microsoft.Extensions.Configuration;
@@ -55,6 +56,12 @@ public static class ServiceRegistration
         services.AddScoped<EntitySelectionResolver>();
         services.AddScoped<GlFilterBuilder>();
         services.AddScoped<IUnpostedREService, UnpostedREService>();
+
+        // ──────────────────────────────────────────────
+        //  Report Strategies — add one entry per report
+        // ──────────────────────────────────────────────
+        services.AddScoped<ITrialBalanceRepository, TrialBalanceRepository>();
+        services.AddScoped<IReportStrategy, TrialBalanceStrategy>();
         services.AddScoped<IGlDetailService, GlDetailService>();
 
         // ──────────────────────────────────────────────

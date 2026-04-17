@@ -49,4 +49,9 @@ public record SavedSettingDto(
 ///          Each char is '9' (digit placeholder) or '-'/'.' (literal separator).
 ///          Used by AccountNumberFormatter.Format() to produce the display string.
 /// </summary>
-public record GLDto(string LedgCode, string DisplayName, int AcctLgt, string AcctDsp);
+public record GLDto(
+    string LedgCode,
+    string DisplayName,
+    int    AcctLgt,
+    string AcctDsp,
+    string ReArnAcct);   // GLCD.REARNACC — retained earnings account for unposted RE
