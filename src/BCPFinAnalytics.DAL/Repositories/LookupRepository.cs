@@ -230,7 +230,9 @@ public class LookupRepository : ILookupRepository
         const string sql = """
             SELECT
                 LEDGCODE                                              AS LedgCode,
-                '(' + RTRIM(LEDGCODE) + ') ' + RTRIM(DESCRPTN)       AS DisplayName
+                '(' + RTRIM(LEDGCODE) + ') ' + RTRIM(DESCRPTN)       AS DisplayName,
+                ACCTLGT                                               AS AcctLgt,
+                RTRIM(ACCTDSP)                                        AS AcctDsp
             FROM GLCD
             ORDER BY LEDGCODE
             """;

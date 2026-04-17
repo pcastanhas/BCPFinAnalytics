@@ -40,6 +40,13 @@ public record SavedSettingDto(
 
 /// <summary>
 /// General Ledger dropdown item.
-/// Sourced from: SELECT LEDGCODE, '('+RTRIM(LEDGCODE)+') '+RTRIM(DESCRPTN) FROM GLCD
+/// Sourced from GLCD — carries all fields needed by AccountNumberFormatter.
+///
+/// AcctLgt: total digit length of the account number (GLCD.ACCTLGT).
+///          Used to left-pad raw ACCTNUM before applying the display mask.
+///
+/// AcctDsp: COBOL-style PICTURE mask (GLCD.ACCTDSP).
+///          Each char is '9' (digit placeholder) or '-'/'.' (literal separator).
+///          Used by AccountNumberFormatter.Format() to produce the display string.
 /// </summary>
-public record GLDto(string LedgCode, string DisplayName);
+public record GLDto(string LedgCode, string DisplayName, int AcctLgt, string AcctDsp);
