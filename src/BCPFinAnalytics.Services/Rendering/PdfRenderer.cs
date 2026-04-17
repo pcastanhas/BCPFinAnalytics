@@ -147,10 +147,21 @@ public class PdfRenderer : IPdfRenderer
             // ── Column headers ─────────────────────────────────────
             table.Header(header =>
             {
-                HeaderCell(header, "Account #");
-                HeaderCell(header, "Description");
+                void HCell(string text) =>
+                    header.Cell()
+                        .Background(ColorHeaderBg)
+                        .BorderBottom(1.5f).BorderColor(ColorBorderFg)
+                        .Padding(3)
+                        .AlignMiddle()
+                        .Text(text)
+                        .Bold()
+                        .FontSize(9)
+                        .FontFamily(FontName);
+
+                HCell("Account #");
+                HCell("Description");
                 foreach (var col in report.Columns)
-                    HeaderCell(header, col.Header);
+                    HCell(col.Header);
             });
 
             // ── Data rows ──────────────────────────────────────────
@@ -376,18 +387,7 @@ public class PdfRenderer : IPdfRenderer
     //  Helpers
     // ══════════════════════════════════════════════════════════════
 
-    private static void HeaderCell(ITableCellContainer header, string text)
-    {
-        header.Cell()
-            .Background(ColorHeaderBg)
-            .BorderBottom(1.5f).BorderColor(ColorBorderFg)
-            .Padding(3)
-            .AlignMiddle()
-            .Text(text)
-            .Bold()
-            .FontSize(9)
-            .FontFamily(FontName);
-    }
+
 
     /// <summary>
     /// Formats a nullable decimal amount for PDF display.
