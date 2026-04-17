@@ -46,8 +46,11 @@
 
 @code {
     protected override void OnInitialized()
-        => AlertService.OnChange += StateHasChanged;
+        => AlertService.OnChange += OnAlertChanged;
+
+    private void OnAlertChanged()
+        => InvokeAsync(StateHasChanged);
 
     public void Dispose()
-        => AlertService.OnChange -= StateHasChanged;
+        => AlertService.OnChange -= OnAlertChanged;
 }
