@@ -7,6 +7,7 @@ using BCPFinAnalytics.Services.Rendering;
 using BCPFinAnalytics.Services.Report;
 using BCPFinAnalytics.Services.Session;
 using BCPFinAnalytics.Services.Format;
+using BCPFinAnalytics.Services.GlDetail;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;

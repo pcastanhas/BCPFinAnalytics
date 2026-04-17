@@ -52,7 +52,7 @@ public class PivotService : IPivotService
                 RowType = RowType.Detail,
                 AccountCode = group.Key.AccountCode,
                 AccountName = group.Key.AccountName,
-                Cells = new Dictionary<string, decimal?>()
+                Cells = new Dictionary<string, CellValue>()
             };
 
             foreach (var col in columns)
