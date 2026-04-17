@@ -76,7 +76,6 @@ else if (_hasRun && !_isRunning)
                     "Report blocked by preflight — ReportType={ReportType} Reason={Reason}",
                     options.ReportType, preflight.ErrorMessage);
                 AlertSvc.AddError(preflight.ErrorMessage);
-                    config => { config.VisibleStateDuration = 8000; });
                 return;
             }
 
