@@ -14,11 +14,11 @@
     <link rel="stylesheet" href="css/app.css" />
 
     <title>BCPFinAnalytics</title>
-    <HeadOutlet @rendermode="InteractiveServer" />
+    <HeadOutlet @rendermode="@(new InteractiveServerRenderMode())" />
 </head>
 
 <body>
-    <Routes @rendermode="InteractiveServer" />
+    <Routes @rendermode="@(new InteractiveServerRenderMode())" />
 
     <!-- MudBlazor JS -->
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
