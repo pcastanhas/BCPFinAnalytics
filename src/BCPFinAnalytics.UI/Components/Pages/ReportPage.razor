@@ -75,7 +75,7 @@ else if (_hasRun && !_isRunning)
                 Logger.LogWarning(
                     "Report blocked by preflight — ReportType={ReportType} Reason={Reason}",
                     options.ReportType, preflight.ErrorMessage);
-                Snackbar.Add(preflight.ErrorMessage, Severity.Warning,
+                AlertSvc.AddError(preflight.ErrorMessage);
                     config => { config.VisibleStateDuration = 8000; });
                 return;
             }

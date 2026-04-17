@@ -109,7 +109,7 @@
             else
             {
                 Logger.LogError("SaveSettingsModal — save failed: {Error}", result.ErrorMessage);
-                Snackbar.Add($"Failed to save settings: {result.ErrorMessage}", Severity.Error);
+                AlertSvc.AddError($"Failed to save settings: {result.ErrorMessage}");
             }
         }
         finally

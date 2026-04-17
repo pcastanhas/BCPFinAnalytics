@@ -293,7 +293,7 @@
             LookupService.GetFormatsAsync(UserSession.DbKey).ContinueWith(t =>
             {
                 if (t.Result.IsSuccess) _formats = t.Result.Data!.ToList();
-                else Snackbar.Add($"Failed to load formats: {t.Result.ErrorMessage}", Severity.Warning);
+                else AlertSvc.AddError($"Failed to load formats: {t.Result.ErrorMessage}");
             }),
             LookupService.GetBudgetsAsync(UserSession.DbKey).ContinueWith(t =>
             {
@@ -318,7 +318,7 @@
             LookupService.GetGLsAsync(UserSession.DbKey).ContinueWith(t =>
             {
                 if (t.Result.IsSuccess) _gls = t.Result.Data!.ToList();
-                else Snackbar.Add($"Failed to load GLs: {t.Result.ErrorMessage}", Severity.Warning);
+                else AlertSvc.AddError($"Failed to load GLs: {t.Result.ErrorMessage}");
             }),
             SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId).ContinueWith(t =>
             {
@@ -374,7 +374,7 @@
 
         if (!result.IsSuccess)
         {
-            Snackbar.Add($"Failed to load setting: {result.ErrorMessage}", Severity.Error);
+            AlertSvc.AddError($"Failed to load setting: {result.ErrorMessage}");
             return;
         }
 
