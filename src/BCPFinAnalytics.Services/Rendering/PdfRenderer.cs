@@ -147,10 +147,10 @@ public class PdfRenderer : IPdfRenderer
             // ── Column headers ─────────────────────────────────────
             table.Header(header =>
             {
-                HeaderCell(header, "Account #", align: TextAlignment.Left);
-                HeaderCell(header, "Description", align: TextAlignment.Left);
+                HeaderCell(header, "Account #");
+                HeaderCell(header, "Description");
                 foreach (var col in report.Columns)
-                    HeaderCell(header, col.Header, align: TextAlignment.Right);
+                    HeaderCell(header, col.Header);
             });
 
             // ── Data rows ──────────────────────────────────────────
@@ -376,9 +376,7 @@ public class PdfRenderer : IPdfRenderer
     //  Helpers
     // ══════════════════════════════════════════════════════════════
 
-    private static void HeaderCell(
-        HeaderDescriptor header, string text,
-        TextAlignment align = TextAlignment.Left)
+    private static void HeaderCell(ITableCellContainer header, string text)
     {
         header.Cell()
             .Background(ColorHeaderBg)
