@@ -20,5 +20,15 @@ public enum RowType
     Total = 3,
 
     /// <summary>Grand total row. Bold, double border, highlighted background.</summary>
-    GrandTotal = 4
+    GrandTotal = 4,
+
+    /// <summary>
+    /// Unposted retained earnings synthetic row.
+    /// Represents the net income for the current fiscal year that has not yet been
+    /// formally closed/posted to the retained earnings account.
+    /// Computed by the UnpostedRetainedEarningsService — not sourced directly from GLSUM.
+    /// Displayed in Balance Sheet and Trial Balance reports after the equity section.
+    /// Styled distinctively (italic, color-coded) to indicate it is a computed/synthetic value.
+    /// </summary>
+    UnpostedRetainedEarnings = 5
 }

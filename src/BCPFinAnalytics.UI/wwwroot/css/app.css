@@ -86,6 +86,17 @@ html, body {
     font-size: 13px;
 }
 
+/* ── Unposted Retained Earnings row ──────────────────── */
+/* Synthetic/computed row — styled to visually distinguish from posted data */
+.row-unposted-retained-earnings td {
+    font-style: italic;
+    font-weight: 600;
+    color: #1565C0;
+    background-color: #f0f7ff;
+    border-top: 1px dashed #90caf9;
+    border-bottom: 1px dashed #90caf9;
+}
+
 /* ── Numeric columns ──────────────────────────────────── */
 .report-table td.numeric {
     text-align: right;

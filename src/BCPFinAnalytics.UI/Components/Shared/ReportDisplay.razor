@@ -88,8 +88,9 @@
         RowType.SubHeader     => "row-sub-header",
         RowType.Detail        => "row-detail",
         RowType.Total         => "row-total",
-        RowType.GrandTotal    => "row-grand-total",
-        _                     => "row-detail"
+        RowType.GrandTotal                  => "row-grand-total",
+        RowType.UnpostedRetainedEarnings    => "row-unposted-retained-earnings",
+        _                                   => "row-detail"
     };
 
     private string RenderCell(ReportRow row, ReportColumn col)
@@ -101,6 +102,8 @@
         // Header rows have no data
         if (row.RowType is RowType.SectionHeader or RowType.SubHeader)
             return string.Empty;
+
+        // Unposted RE row — render normally (it has numeric data)
 
         if (!row.Cells.TryGetValue(col.ColumnId, out var value) || value == null)
             return string.Empty;
