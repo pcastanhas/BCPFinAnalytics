@@ -9,6 +9,7 @@
 @inject UserSessionService UserSession
 @inject ISnackbar Snackbar
 @inject ILogger<ReportPage> Logger
+@inject BCPFinAnalytics.Services.Preflight.IReportPreflightService PreflightService
 @inject IJSRuntime JS
 
 @*
@@ -66,6 +67,18 @@ else if (_hasRun && !_isRunning)
 
         try
         {
+            // ── Preflight validation — runs before every report, no exceptions ──
+            var preflight = await PreflightService.ValidateAsync(options);
+            if (!preflight.IsSuccess)
+            {
+                Logger.LogWarning(
+                    "Report blocked by preflight — ReportType={ReportType} Reason={Reason}",
+                    options.ReportType, preflight.ErrorMessage);
+                Snackbar.Add(preflight.ErrorMessage, Severity.Warning,
+                    config => { config.VisibleStateDuration = 8000; });
+                return;
+            }
+
             var strategy = StrategyResolver.Resolve(options.ReportType);
             var result = await strategy.ExecuteAsync(options);
 

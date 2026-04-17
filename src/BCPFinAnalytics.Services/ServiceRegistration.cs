@@ -6,6 +6,7 @@ using BCPFinAnalytics.Services.Lookup;
 using BCPFinAnalytics.Services.Rendering;
 using BCPFinAnalytics.Services.Report;
 using BCPFinAnalytics.Services.Session;
+using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -28,6 +29,7 @@ public static class ServiceRegistration
         services.AddSingleton<IDbConnectionFactory, DbConnectionFactory>();
         services.AddScoped<ILookupRepository, LookupRepository>();
         services.AddScoped<ISavedSettingsRepository, SavedSettingsRepository>();
+        services.AddScoped<IEntityMetaRepository, EntityMetaRepository>();
 
         // ──────────────────────────────────────────────
         //  Session (Scoped — one per Blazor circuit)
@@ -41,6 +43,7 @@ public static class ServiceRegistration
         services.AddScoped<ISavedSettingsService, SavedSettingsService>();
         services.AddScoped<IReportStrategyResolver, ReportStrategyResolver>();
         services.AddScoped<IPivotService, PivotService>();
+        services.AddScoped<IReportPreflightService, ReportPreflightService>();
 
         // ──────────────────────────────────────────────
         //  Renderers (Scoped — stateless but scoped for logging context)
