@@ -101,8 +101,9 @@ public class TrialBalanceDCRepository : ITrialBalanceDCRepository
         GlQueryParameters glParams,
         string startPeriod)
     {
-        // Activity query: net movement between StartPeriod and EndPeriod
-        // Same for all account types — no CASE needed here
+        // Activity query: net movement between StartPeriod and EndPeriod.
+        // Excludes BALFOR='B' rows — those are year-opening balance entries
+        // that belong in the starting balance query only, not in Debits/Credits.
         const string sql = """
             SELECT
                 RTRIM(g.ACCTNUM)    AS AcctNum,
@@ -117,6 +118,7 @@ public class TrialBalanceDCRepository : ITrialBalanceDCRepository
               AND s.ENTITYID IN @EntityIds
               AND s.BASIS    IN @BasisList
               AND s.PERIOD   BETWEEN @StartPeriod AND @EndPeriod
+              AND s.BALFOR   = 'N'
             GROUP BY g.ACCTNUM, g.ACCTNAME, g.TYPE, s.ENTITYID
             ORDER BY g.ACCTNUM
             """;
