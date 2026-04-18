@@ -453,12 +453,14 @@ public class TrialBalanceDCStrategy : IReportStrategy
             var drillColId = deb.HasValue ? ColDebits : ColCredits;
             var drillDown  = new DrillDownRef
             {
-                AcctNums     = new[] { acctNum },
-                EntityIds    = glParams.EntityIds,
-                PeriodFrom   = glParams.BegYrPd,  // already YYYYMM from GlFilterBuilder
-                PeriodTo     = glParams.EndPeriod,
-                BasisList    = glParams.BasisList,
-                DisplayLabel = $"{formattedAcct} · {data.AcctName}"
+                AcctNums         = new[] { acctNum },
+                EntityIds        = glParams.EntityIds,
+                PeriodFrom       = glParams.BegYrPd,
+                PeriodTo         = glParams.EndPeriod,
+                BasisList        = glParams.BasisList,
+                DisplayLabel     = $"{formattedAcct} · {data.AcctName}",
+                StartingBalance  = signedStarting == 0m ? null : (decimal?)signedStarting,
+                EndingBalance    = ending
             };
 
             var cells = BuildCells(

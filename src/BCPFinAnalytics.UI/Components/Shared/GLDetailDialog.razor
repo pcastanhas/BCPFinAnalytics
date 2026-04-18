@@ -45,6 +45,10 @@
         {
             <MudAlert Severity="Severity.Info">
                 No transactions found for the selected criteria.
+                @if (DrillDown.StartingBalance.HasValue || DrillDown.EndingBalance.HasValue)
+                {
+                    <span> Balance: @FormatAmount(DrillDown.EndingBalance ?? DrillDown.StartingBalance ?? 0m)</span>
+                }
             </MudAlert>
         }
         else
@@ -89,6 +93,15 @@
                         </tr>
                     </thead>
                     <tbody>
+                        @if (DrillDown.StartingBalance.HasValue)
+                        {
+                            <tr class="gl-detail-balance-row">
+                                <td colspan="@(TotalColspan - 1)"><strong>Starting Balance</strong></td>
+                                <td class="amount @(DrillDown.StartingBalance.Value < 0 ? "negative" : "")">
+                                    <strong>@FormatAmount(DrillDown.StartingBalance.Value)</strong>
+                                </td>
+                            </tr>
+                        }
                         @foreach (var row in _rows)
                         {
                             <tr class="gl-detail-row">
@@ -117,11 +130,20 @@
                     </tbody>
                     <tfoot>
                         <tr class="gl-detail-total">
-                            <td colspan="@TotalColspan">Total</td>
+                            <td colspan="@(TotalColspan - 1)">Net Activity</td>
                             <td class="amount @(_rows.Sum(r => r.Amt) < 0 ? "negative" : "")">
                                 @FormatAmount(_rows.Sum(r => r.Amt))
                             </td>
                         </tr>
+                        @if (DrillDown.EndingBalance.HasValue)
+                        {
+                            <tr class="gl-detail-balance-row gl-detail-ending">
+                                <td colspan="@(TotalColspan - 1)"><strong>Ending Balance</strong></td>
+                                <td class="amount @(DrillDown.EndingBalance.Value < 0 ? "negative" : "")">
+                                    <strong>@FormatAmount(DrillDown.EndingBalance.Value)</strong>
+                                </td>
+                            </tr>
+                        }
                     </tfoot>
                 </table>
             </div>

@@ -54,6 +54,22 @@ public sealed record DrillDownRef
     public IReadOnlyList<string> BasisList { get; init; } = Array.Empty<string>();
 
     /// <summary>
+    /// Starting balance to display at the top of the modal transaction list.
+    /// For Simple TB: null (cumulative balance, no meaningful "starting" point).
+    /// For TBDC: the Starting Balance column value for this account.
+    /// For IS columns: null (income accounts have no starting balance).
+    /// </summary>
+    public decimal? StartingBalance { get; init; } = null;
+
+    /// <summary>
+    /// Ending balance to display at the bottom of the modal transaction list.
+    /// For Simple TB: the Balance column value (cumulative).
+    /// For TBDC: the Ending Balance column value.
+    /// Null if not applicable.
+    /// </summary>
+    public decimal? EndingBalance { get; init; } = null;
+
+    /// <summary>
     /// Display label shown in the modal header.
     /// Pre-formatted by the report strategy — e.g.
     ///   "401-0005 · RESIDENTIAL RENT - GROSS"          (single account)

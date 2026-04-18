@@ -394,14 +394,15 @@ public class TrialBalanceStrategy : IReportStrategy
             // Build DrillDownRef — Detail rows are drillable
             var drillDown = new DrillDownRef
             {
-                AcctNums     = new[] { acctNum },
-                EntityIds    = glParams.EntityIds,
-                PeriodFrom   = acctData.Type is "B" or "C"
-                                   ? glParams.BalForPd
-                                   : glParams.BegYrPd,
-                PeriodTo     = glParams.EndPeriod,
-                BasisList    = glParams.BasisList,
-                DisplayLabel = $"{formattedAcct} · {acctData.AcctName}"
+                AcctNums       = new[] { acctNum },
+                EntityIds      = glParams.EntityIds,
+                PeriodFrom     = acctData.Type is "B" or "C"
+                                     ? glParams.BalForPd
+                                     : glParams.BegYrPd,
+                PeriodTo       = glParams.EndPeriod,
+                BasisList      = glParams.BasisList,
+                DisplayLabel   = $"{formattedAcct} · {acctData.AcctName}",
+                EndingBalance  = display  // Balance column value = ending balance
             };
 
             rows.Add(new ReportRow

@@ -560,3 +560,17 @@ html, body {
 .row-grand-total td {
     color: #111111;
 }
+
+/* GL Detail — starting/ending balance rows */
+.gl-detail-balance-row td {
+    background-color: #e8f0fe;
+    border-top: 1px solid #90caf9;
+    border-bottom: 1px solid #90caf9;
+    padding: 5px 8px;
+    font-size: 13px;
+}
+
+.gl-detail-ending td {
+    background-color: #e3f2fd;
+    border-top: 2px solid #1565C0;
+}
