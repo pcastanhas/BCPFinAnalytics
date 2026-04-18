@@ -33,6 +33,32 @@
                OnClear="@OnClear" />
 </div>
 
+<!-- Display Options — always visible below buttons -->
+<MudExpansionPanels Elevation="1" Class="mb-2">
+    <MudExpansionPanel Text="Display Options"
+                       Icon="@Icons.Material.Filled.Tune"
+                       @bind-Expanded="_displayOptionsExpanded"
+                       Dense="true">
+        <MudCheckBox @bind-Value="_options.WholeDollars"
+                     Label="Display in whole dollars"
+                     Color="Color.Primary"
+                     Disabled="@(!_config.WholeDollarsEnabled)"
+                     Dense="true" />
+        <MudCheckBox @bind-Value="_options.SuppressZeroAccounts"
+                     Label="Suppress accounts with 0 value"
+                     Color="Color.Primary"
+                     Dense="true" />
+        <MudCheckBox @bind-Value="_options.SuppressInactiveSubtotals"
+                     Label="Suppress subtotals with no activity"
+                     Color="Color.Primary"
+                     Dense="true" />
+        <MudCheckBox @bind-Value="_options.ShadeAlternateRows"
+                     Label="Shade alternate rows"
+                     Color="Color.Primary"
+                     Dense="true" />
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
 <MudExpansionPanels Class="options-panel mb-3" Elevation="2">
     <MudExpansionPanel Text="Report Options"
                        @bind-Expanded="_panelExpanded"
@@ -207,34 +233,6 @@
                                     <MudSelectItem T="string" Value="@s.SFType">@s.DisplayName</MudSelectItem>
                                 }
                             </MudSelect>
-                        </MudItem>
-
-                        <!-- Display Options — collapsible -->
-                        <MudItem xs="12">
-                            <MudExpansionPanels Elevation="0">
-                                <MudExpansionPanel Text="Display Options"
-                                                   Icon="@Icons.Material.Filled.Tune"
-                                                   @bind-Expanded="_displayOptionsExpanded"
-                                                   Dense="true">
-                                    <MudCheckBox @bind-Value="_options.WholeDollars"
-                                                 Label="Display in whole dollars"
-                                                 Color="Color.Primary"
-                                                 Disabled="@(!_config.WholeDollarsEnabled)"
-                                                 Dense="true" />
-                                    <MudCheckBox @bind-Value="_options.SuppressZeroAccounts"
-                                                 Label="Suppress accounts with 0 value"
-                                                 Color="Color.Primary"
-                                                 Dense="true" />
-                                    <MudCheckBox @bind-Value="_options.SuppressInactiveSubtotals"
-                                                 Label="Suppress subtotals with no activity"
-                                                 Color="Color.Primary"
-                                                 Dense="true" />
-                                    <MudCheckBox @bind-Value="_options.ShadeAlternateRows"
-                                                 Label="Shade alternate rows"
-                                                 Color="Color.Primary"
-                                                 Dense="true" />
-                                </MudExpansionPanel>
-                            </MudExpansionPanels>
                         </MudItem>
 
             </MudGrid>
