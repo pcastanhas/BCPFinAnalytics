@@ -146,6 +146,53 @@
                                              Placeholder="Type to search formats..." />
                         </MudItem>
 
+                        <!-- Selection Mode radio group -->
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                                Entity Selection
+                            </MudText>
+                            <MudRadioGroup T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                           Value="@_options.SelectionMode"
+                                           ValueChanged="@OnSelectionModeChanged">
+                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Include"
+                                          Color="Color.Primary"
+                                          Disabled="@(!_config.EntitySelectionEnabled)">
+                                    Include
+                                </MudRadio>
+                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Exclude"
+                                          Color="Color.Primary"
+                                          Disabled="@(!_config.EntitySelectionEnabled)">
+                                    Exclude
+                                </MudRadio>
+                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
+                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Range"
+                                          Color="Color.Primary"
+                                          Disabled="@(!_config.EntitySelectionEnabled)">
+                                    Range
+                                </MudRadio>
+                            </MudRadioGroup>
+                        </MudItem>
+
+                        <!-- Entity/Project searchable grid -->
+                        <MudItem xs="12">
+                            <EntitySelectionGrid Mode="@_options.SelectionMode"
+                                                 SelectedIds="@_options.SelectedIds"
+                                                 SelectedIdsChanged="ids => _options.SelectedIds = ids"
+                                                 Entities="@_entities"
+                                                 Disabled="@(!_config.EntitySelectionEnabled)" />
+                        </MudItem>
+
+                        <!-- Basis multi-select -->
+                        <MudItem xs="12">
+                            <BasisMultiSelect BasisItems="@_basisItems"
+                                              SelectedBasis="@_options.Basis"
+                                              SelectedBasisChanged="basis => _options.Basis = basis"
+                                              Disabled="@(!_config.BasisEnabled)" />
+                        </MudItem>
+
+
                         <!-- Budget -->
                         <MudItem xs="6">
                             <MudSelect T="string"
@@ -198,52 +245,6 @@
                             <MudCheckBox @bind-Value="_options.SuppressInactiveSubtotals"
                                          Label="Suppress subtotals with no activity"
                                          Color="Color.Primary" />
-                        </MudItem>
-
-                        <!-- Selection Mode radio group -->
-                        <MudItem xs="12">
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
-                                Entity Selection
-                            </MudText>
-                            <MudRadioGroup T="BCPFinAnalytics.Common.Enums.SelectionMode"
-                                           Value="@_options.SelectionMode"
-                                           ValueChanged="@OnSelectionModeChanged">
-                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
-                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Include"
-                                          Color="Color.Primary"
-                                          Disabled="@(!_config.EntitySelectionEnabled)">
-                                    Include
-                                </MudRadio>
-                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
-                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Exclude"
-                                          Color="Color.Primary"
-                                          Disabled="@(!_config.EntitySelectionEnabled)">
-                                    Exclude
-                                </MudRadio>
-                                <MudRadio T="BCPFinAnalytics.Common.Enums.SelectionMode"
-                                          Value="BCPFinAnalytics.Common.Enums.SelectionMode.Range"
-                                          Color="Color.Primary"
-                                          Disabled="@(!_config.EntitySelectionEnabled)">
-                                    Range
-                                </MudRadio>
-                            </MudRadioGroup>
-                        </MudItem>
-
-                        <!-- Entity/Project searchable grid -->
-                        <MudItem xs="12">
-                            <EntitySelectionGrid Mode="@_options.SelectionMode"
-                                                 SelectedIds="@_options.SelectedIds"
-                                                 SelectedIdsChanged="ids => _options.SelectedIds = ids"
-                                                 Entities="@_entities"
-                                                 Disabled="@(!_config.EntitySelectionEnabled)" />
-                        </MudItem>
-
-                        <!-- Basis multi-select -->
-                        <MudItem xs="12">
-                            <BasisMultiSelect BasisItems="@_basisItems"
-                                              SelectedBasis="@_options.Basis"
-                                              SelectedBasisChanged="basis => _options.Basis = basis"
-                                              Disabled="@(!_config.BasisEnabled)" />
                         </MudItem>
 
             </MudGrid>
