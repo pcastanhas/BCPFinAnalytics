@@ -34,6 +34,7 @@ public class ReportMetadata
 
     /// <summary>When true, all currency values are rounded to whole dollars.</summary>
     public bool WholeDollars { get; set; } = false;
+    public bool ShadeAlternateRows { get; set; } = false;
 
     /// <summary>
     /// JSON snapshot of all user-selected options at the time the report was run.

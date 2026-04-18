@@ -486,3 +486,11 @@ html, body {
     flex: 1;
     min-width: 0;
 }
+
+/* ═══════════════════════════════════════════════════
+   ZEBRA STRIPING — alternate row shading
+   ═══════════════════════════════════════════════════ */
+
+.report-table-zebra .row-alt td {
+    background-color: #f5f7fa;
+}

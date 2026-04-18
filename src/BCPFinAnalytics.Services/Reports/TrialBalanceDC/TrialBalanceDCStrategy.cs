@@ -361,7 +361,8 @@ public class TrialBalanceDCStrategy : IReportStrategy
                 RunDate         = DateTime.Now,
                 RunByUserId     = options.UserId,
                 DbKey           = options.DbKey,
-                WholeDollars    = options.WholeDollars,
+                WholeDollars         = options.WholeDollars,
+                ShadeAlternateRows   = options.ShadeAlternateRows,
                 OptionsSnapshot = optionsJson
             };
 
