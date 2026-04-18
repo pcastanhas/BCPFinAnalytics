@@ -181,7 +181,7 @@ html, body {
 }
 .entity-row:hover { background-color: #e8f0fe; }
 .entity-row.selected { background-color: #e3f2fd; }
-.entity-id { font-family: 'Courier New', monospace; font-size: 12px; color: #555; min-width: 80px; }
+.entity-id { font-family: 'Courier New', monospace; font-size: 12px; color: #111; min-width: 80px; font-weight: 500; }
 .entity-name { color: #212121; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .entity-selection-summary { font-size: 12px; }
 
@@ -492,4 +492,45 @@ html, body {
 
 .report-table-zebra .row-alt td {
     background-color: #f5f7fa;
+}
+
+/* ═══════════════════════════════════════════════════
+   READABILITY — darken MudBlazor secondary/caption text
+   ═══════════════════════════════════════════════════ */
+
+/* MudBlazor uses --mud-palette-text-secondary for grey text */
+:root {
+    --mud-palette-text-secondary: #333333 !important;
+    --mud-palette-text-disabled: #666666 !important;
+}
+
+/* Darken caption and label text throughout */
+.mud-input-label,
+.mud-input-helper-text,
+.mud-typography-caption,
+.mud-list-item-text .mud-typography {
+    color: #333333 !important;
+}
+
+/* Expansion panel header text */
+.mud-expand-panel-header .mud-typography {
+    color: #111111 !important;
+    font-weight: 500 !important;
+}
+
+/* Report table — already dark but reinforce */
+.report-table td {
+    color: #111111;
+}
+
+.row-sub-header td {
+    color: #111111;
+}
+
+.row-total td {
+    color: #111111;
+}
+
+.row-grand-total td {
+    color: #111111;
 }

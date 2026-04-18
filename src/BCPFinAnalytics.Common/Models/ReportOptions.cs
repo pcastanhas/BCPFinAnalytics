@@ -49,7 +49,7 @@ public class ReportOptions
 
     /// <summary>When true, all currency values are rounded to whole dollars.</summary>
     public bool WholeDollars { get; set; } = false;  // default: show cents
-    public bool ShadeAlternateRows { get; set; } = false;
+    public bool ShadeAlternateRows { get; set; } = true;
 
     /// <summary>When true, account/detail rows whose values are all zero are hidden from the report.</summary>
     public bool SuppressZeroAccounts { get; set; } = true;   // default: suppress
