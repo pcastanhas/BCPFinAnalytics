@@ -15,14 +15,25 @@
 
 @*
     ReportPage — side-by-side layout.
-    Left: fixed 360px options sidebar.
-    Right: report display area fills remaining width.
+    Sidebar (480px) can be toggled left or right by the user.
 *@
 
-<div class="report-page-layout">
+<div class="report-page-layout @(_sidebarOnRight ? "sidebar-right" : "sidebar-left")">
 
-    <!-- ── LEFT SIDEBAR — Options ──────────────────────── -->
+    <!-- ── SIDEBAR — Options ───────────────────────────── -->
     <div class="report-sidebar">
+        <!-- Sidebar position toggle -->
+        <div class="sidebar-toggle-bar">
+            <MudTooltip Text="@(_sidebarOnRight ? "Move panel to left" : "Move panel to right")">
+                <MudIconButton Icon="@(_sidebarOnRight
+                                    ? Icons.Material.Filled.KeyboardDoubleArrowLeft
+                                    : Icons.Material.Filled.KeyboardDoubleArrowRight)"
+                               Size="Size.Small"
+                               Color="Color.Default"
+                               OnClick="() => _sidebarOnRight = !_sidebarOnRight" />
+            </MudTooltip>
+        </div>
+
         @if (_isRunning)
         {
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-1" />
@@ -30,7 +41,7 @@
         <OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
     </div>
 
-    <!-- ── RIGHT CONTENT — Report ──────────────────────── -->
+    <!-- ── CONTENT — Report ────────────────────────────── -->
     <div class="report-content">
         @if (_reportResult != null)
         {
@@ -61,6 +72,7 @@
     private ReportResult? _reportResult;
     private bool _isRunning = false;
     private bool _hasRun = false;
+    private bool _sidebarOnRight = false;
 
     private async Task RunReport((ReportOptions Options, OptionsPanel.OutputFormat Format) args)
     {
