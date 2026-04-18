@@ -98,22 +98,22 @@ public class EntityMetaRepository : IEntityMetaRepository
     /// The SELECT projection is passed in so both COUNT and SELECT DISTINCT
     /// share the same WHERE-clause logic.
     /// </summary>
-    private static (string Sql, object? Parameters) BuildYearEndQuery(
-        string selectClause,
-        SelectionMode selectionMode,
-        IReadOnlyList<string> selectedIds)
-    {
     /// <inheritdoc />
     public async Task<IEnumerable<string>> GetDistinctLedgCodesAsync(
         string dbKey,
         SelectionMode selectionMode,
         IReadOnlyList<string> selectedIds)
     {
-        var (sql, parameters) = BuildQuery("SELECT DISTINCT LEDGCODE", selectionMode, selectedIds);
+        var (sql, parameters) = BuildYearEndQuery("SELECT DISTINCT LEDGCODE", selectionMode, selectedIds);
         await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
         return await conn.QueryAsync<string>(sql, parameters);
     }
 
+    private static (string Sql, object? Parameters) BuildYearEndQuery(
+        string selectClause,
+        SelectionMode selectionMode,
+        IReadOnlyList<string> selectedIds)
+    {
         return selectionMode switch
         {
             SelectionMode.Include =>
