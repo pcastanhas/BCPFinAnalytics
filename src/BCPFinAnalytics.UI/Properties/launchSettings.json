@@ -13,7 +13,7 @@
     "IIS Express": {
       "commandName": "IISExpress",
       "launchBrowser": true,
-      "launchUrl": "/?db=TEST&userid=paul",
+      "launchUrl": "?db=PROD&userid=paul",
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
