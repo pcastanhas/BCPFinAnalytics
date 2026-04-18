@@ -283,13 +283,20 @@
     {
         Logger.LogInformation("OptionsPanel initializing — loading lookup data for DbKey={DbKey}",
             UserSession.DbKey);
-
-        await LoadLookupsAsync();
-        _loading = false;
+        try
+        {
+            await LoadLookupsAsync();
+        }
+        finally
+        {
+            _loading = false;  // always stop the spinner
+        }
     }
 
     private async Task LoadLookupsAsync()
     {
+      try
+      {
         // Sequential awaits keep everything on the Blazor dispatcher —
         // avoids threading issues from Task.WhenAll + ContinueWith mutations.
         var r1 = await LookupService.GetFormatsAsync(UserSession.DbKey);
@@ -329,6 +336,12 @@
             "OptionsPanel lookups loaded — ReportTypes={RT} Formats={F} Budgets={B} SFTypes={S} Basis={Ba} Entities={E} Projects={P} GLs={G} SavedSettings={SS} DefaultLedgCode={L}",
             _reportTypes.Count, _formats.Count, _budgets.Count, _sfTypes.Count, _basisItems.Count,
             _entities.Count, _projects.Count, _gls.Count, _savedSettings.Count, _options.LedgCode);
+      }
+      catch (Exception ex)
+      {
+          Logger.LogError(ex, "OptionsPanel.LoadLookupsAsync FAILED: {Message}", ex.Message);
+          AlertSvc.AddError($"Failed to load options: {ex.Message} — {ex.InnerException?.Message}");
+      }
     }
 
     private void OnReportTypeChanged(string reportCode)
