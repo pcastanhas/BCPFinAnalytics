@@ -21,10 +21,11 @@
     Emits ReportOptions when the user clicks Display/Excel/PDF.
 *@
 
-<MudExpansionPanels Class="options-panel mb-3" Elevation="2">
-    <MudExpansionPanel Text="Report Options"
-                       @bind-Expanded="_panelExpanded"
-                       Icon="@Icons.Material.Filled.Tune">
+<MudPaper Class="options-panel mb-3 pa-3" Elevation="2">
+    <MudText Typo="Typo.h6" Class="mb-2">
+        <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-1" />
+        Report Options
+    </MudText>
 
         @if (_loading)
         {
@@ -256,8 +257,7 @@
                        OnClear="@OnClear" />
         }
 
-    </MudExpansionPanel>
-</MudExpansionPanels>
+</MudPaper>
 
 @code {
     [Parameter] public EventCallback<(ReportOptions Options, OutputFormat Format)> OnRunReport { get; set; }
