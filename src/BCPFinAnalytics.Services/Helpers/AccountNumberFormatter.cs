@@ -55,6 +55,12 @@ public static class AccountNumberFormatter
         // Step 1: trim trailing spaces
         var trimmed = rawAcctNum.TrimEnd();
 
+        // Step 1b: strip ledger code prefix (e.g. "MR" from "MR400000000")
+        // ACCTNUM in GACC/GLSUM is char(11) = ledger code + numeric account.
+        // The numeric portion is always the last ACCTLGT characters.
+        if (trimmed.Length > acctLgt)
+            trimmed = trimmed.Substring(trimmed.Length - acctLgt);
+
         // Step 2: left-pad to acctLgt with zeros
         if (trimmed.Length < acctLgt)
         {
