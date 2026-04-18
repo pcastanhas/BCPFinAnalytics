@@ -4,7 +4,6 @@
 @inject UserSessionService UserSession
 @inject ILogger<Index> Logger
 @inject NavigationManager NavigationManager
-@inject IJSRuntime JS
 
 <PageTitle>BCPFinAnalytics</PageTitle>
 
@@ -19,44 +18,43 @@ else if (!UserSession.IsValid)
         <MudText Typo="Typo.h6">Session Error</MudText>
         <MudText Typo="Typo.body1" Class="mt-2">@_sessionError</MudText>
         <MudText Typo="Typo.body2" Class="mt-1">
-            Expected URL: <strong>BCPFinAnalytics?db=PROD&amp;userid=username</strong>
+            Expected URL format: <strong>BCPFinAnalytics?db=PROD&amp;userid=username</strong>
         </MudText>
-        <MudText Typo="Typo.caption" Class="mt-1">URL: @NavigationManager.Uri</MudText>
     </MudAlert>
 }
 else
 {
-    <div style="background:lime;padding:20px;font-size:24px;">SESSION OK</div>
-    <div style="background:yellow;padding:10px;">Testing OptionsPanel directly:</div>
-    <OptionsPanel OnRunReport="_ => Task.CompletedTask" IsRunning="false" />
+    <ReportPage />
 }
 
 @code {
     private bool _sessionInitialized = false;
     private string _sessionError = string.Empty;
 
-    protected override async Task OnInitializedAsync()
+    protected override void OnInitialized()
     {
-        var uri   = new Uri(NavigationManager.Uri);
-        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var uri    = new Uri(NavigationManager.Uri);
+        var query  = System.Web.HttpUtility.ParseQueryString(uri.Query);
         var db     = query["db"]?.Trim();
         var userId = query["userid"]?.Trim();
 
-        // Write to browser console — persists even after page navigation
-        await JS.InvokeVoidAsync("console.log",
-            $"[BCPFinAnalytics] OnInitialized — db={db ?? "(missing)"} userid={userId ?? "(missing)"} uri={NavigationManager.Uri}");
+        Logger.LogInformation(
+            "BCPFinAnalytics session initializing — db={DbKey} userid={UserId}",
+            db ?? "(missing)", userId ?? "(missing)");
 
         var result = UserSession.Initialize(db, userId);
 
-        await JS.InvokeVoidAsync("console.log",
-            $"[BCPFinAnalytics] Session result — IsSuccess={result.IsSuccess} Error={result.ErrorMessage} IsValid={UserSession.IsValid}");
-
         if (!result.IsSuccess)
+        {
             _sessionError = result.ErrorMessage;
+            Logger.LogWarning("Session init failed — {Error}", result.ErrorMessage);
+        }
+        else
+        {
+            Logger.LogInformation("Session OK — db={DbKey} userid={UserId}",
+                UserSession.DbKey, UserSession.UserId);
+        }
 
         _sessionInitialized = true;
-
-        await JS.InvokeVoidAsync("console.log",
-            $"[BCPFinAnalytics] Done — IsValid={UserSession.IsValid} DbKey={UserSession.DbKey}");
     }
 }
