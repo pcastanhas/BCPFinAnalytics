@@ -110,20 +110,23 @@
                                          Disabled="@(!_config.EndPeriodEnabled)" />
                         </MudItem>
 
-                        <!-- Format -->
+                        <!-- Format — searchable autocomplete (445+ formats) -->
                         <MudItem xs="12">
-                            <MudSelect T="string"
-                                       Label="Format"
-                                       @bind-Value="_options.Format"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense"
-                                       Disabled="@(!_config.FormatEnabled)"
-                                       Clearable="true">
-                                @foreach (var f in _formats)
-                                {
-                                    <MudSelectItem T="string" Value="@f.Code">@f.DisplayName</MudSelectItem>
-                                }
-                            </MudSelect>
+                            <MudAutocomplete T="string"
+                                             Label="Format"
+                                             Value="@_options.Format"
+                                             ValueChanged="v => _options.Format = v ?? string.Empty"
+                                             SearchFunc="@SearchFormats"
+                                             ToStringFunc="@FormatCodeToDisplay"
+                                             Variant="Variant.Outlined"
+                                             Margin="Margin.Dense"
+                                             Disabled="@(!_config.FormatEnabled)"
+                                             Clearable="true"
+                                             MinCharacters="0"
+                                             MaxItems="50"
+                                             ResetValueOnEmptyText="true"
+                                             AdornmentIcon="@Icons.Material.Filled.Search"
+                                             Placeholder="Type to search formats..." />
                         </MudItem>
 
                         <!-- Budget -->
@@ -334,6 +337,26 @@
         {
             _loading = false;
         }
+    }
+
+    /// <summary>Search formats by code or display name — used by MudAutocomplete.</summary>
+    private Task<IEnumerable<string>> SearchFormats(string search, CancellationToken ct)
+    {
+        var results = string.IsNullOrWhiteSpace(search)
+            ? _formats.Take(50)
+            : _formats.Where(f =>
+                f.Code.Contains(search, StringComparison.OrdinalIgnoreCase) ||
+                f.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase));
+
+        return Task.FromResult(results.Select(f => f.Code));
+    }
+
+    /// <summary>Converts a format code back to its display name for the autocomplete input.</summary>
+    private string FormatCodeToDisplay(string? code)
+    {
+        if (string.IsNullOrEmpty(code)) return string.Empty;
+        var fmt = _formats.FirstOrDefault(f => f.Code == code);
+        return fmt?.DisplayName ?? code;
     }
 
     private void OnReportTypeChanged(string reportCode)
