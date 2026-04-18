@@ -19,6 +19,9 @@ public sealed class FormatDefinition
     /// <summary>Format display name — GUSR.NAME.</summary>
     public string FormatName { get; init; } = string.Empty;
 
+    /// <summary>Financial type — GUSR.FINANTYP. 'B' = Balance Sheet, 'I' = Income/All.</summary>
+    public string FinanTyp { get; init; } = string.Empty;
+
     /// <summary>
     /// GL ledger code this format belongs to — GUSR.LEDGCODE.
     /// Used to filter GARR when resolving @GRP* references.
