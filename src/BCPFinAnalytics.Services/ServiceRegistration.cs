@@ -12,6 +12,7 @@ using BCPFinAnalytics.Services.GlDetail;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Reports.TrialBalance;
 using BCPFinAnalytics.Services.Reports.TrialBalanceDC;
+using BCPFinAnalytics.Services.Reports.IncomeStatement;
 using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;
 using Microsoft.Extensions.Configuration;
