@@ -141,7 +141,6 @@ public class ExcelRenderer : IExcelRenderer
     /// </summary>
     private int WriteReportHeader(IXLWorksheet ws, ReportMetadata meta, int startRow)
     {
-        int totalCols = FirstDataCol; // will expand dynamically — placeholder
 
         // Row 1: Report title
         var titleCell = ws.Cell(startRow, ColAccountCode);
