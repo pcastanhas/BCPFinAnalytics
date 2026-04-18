@@ -539,9 +539,12 @@ public class IncomeStatementStrategy : IReportStrategy
     private static decimal ApplySign(decimal amount, FormatRow fmtRow)
     {
         var result = amount;
-        if (fmtRow.DebCred == "C")          result = -result;
-        if (fmtRow.Options.FlipSign)        result = -result;
-        if (fmtRow.Options.ReverseSign)     result = -result;
+        // DEBCRED='C' → negate (income accounts stored as negative credits in GL)
+        if (fmtRow.DebCred == "C")       result = -result;
+        // O=^ → flip sign for display
+        if (fmtRow.Options.FlipSign)     result = -result;
+        // NOTE: O=R (ReverseSign) affects accumulation direction only, NOT display.
+        // Do NOT negate here — R means subtract from group total, not flip display.
         return result;
     }
 

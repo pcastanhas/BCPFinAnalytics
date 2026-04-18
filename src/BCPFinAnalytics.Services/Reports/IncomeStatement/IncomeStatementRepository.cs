@@ -105,7 +105,7 @@ public class IncomeStatementRepository : IIncomeStatementRepository
                 RTRIM(g.ACCTNAME)  AS AcctName,
                 RTRIM(g.TYPE)      AS Type,
                 RTRIM(b.ENTITYID)  AS EntityId,
-                SUM(b.ACTIVITY)    AS Amount
+                ISNULL(SUM(b.ACTIVITY), 0)    AS Amount
             FROM GACC g
             JOIN BUDGETS b ON b.ACCTNUM = g.ACCTNUM
             WHERE g.ACCTNUM  >= @LedgLo
