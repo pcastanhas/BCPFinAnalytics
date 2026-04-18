@@ -104,7 +104,7 @@ public class EntityMetaRepository : IEntityMetaRepository
         SelectionMode selectionMode,
         IReadOnlyList<string> selectedIds)
     {
-        var (sql, parameters) = BuildYearEndQuery("SELECT DISTINCT LEDGCODE", selectionMode, selectedIds);
+        (string sql, object? parameters) = BuildYearEndQuery("SELECT DISTINCT LEDGCODE", selectionMode, selectedIds);
         await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
         return await conn.QueryAsync<string>(sql, parameters);
     }
