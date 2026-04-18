@@ -1,6 +1,7 @@
 using System.Text.Json;
 using BCPFinAnalytics.Common.DTOs;
 using BCPFinAnalytics.Common.Enums;
+using BCPFinAnalytics.DAL.Interfaces;
 using BCPFinAnalytics.Common.Interfaces;
 using BCPFinAnalytics.Common.Models;
 using BCPFinAnalytics.Common.Models.Format;
@@ -39,6 +40,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
     private readonly ITrialBalanceDCRepository _repository;
     private readonly IUnpostedREService _unpostedReService;
     private readonly ILookupService _lookupService;
+    private readonly IBalForRepository _balForRepository;
     private readonly ILogger<TrialBalanceDCStrategy> _logger;
 
     // Column ID constants
@@ -56,6 +58,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
         ITrialBalanceDCRepository repository,
         IUnpostedREService unpostedReService,
         ILookupService lookupService,
+        IBalForRepository balForRepository,
         ILogger<TrialBalanceDCStrategy> logger)
     {
         _formatLoader      = formatLoader;
@@ -63,6 +66,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
         _repository        = repository;
         _unpostedReService = unpostedReService;
         _lookupService     = lookupService;
+        _balForRepository  = balForRepository;
         _logger            = logger;
     }
 
@@ -146,25 +150,52 @@ public class TrialBalanceDCStrategy : IReportStrategy
                 startPeriod, periodBeforeStart, glParams.EndPeriod,
                 glParams.BegYrPd, glParams.BalForPd);
 
-            // ── Step 6: Execute both queries ───────────────────────────────
-            // Starting balance query — skip if StartPeriod == BegYrPd
-            // (all income accounts would be zero, B/C would also be zero
-            //  since PeriodBeforeStart would be before BALFORPD)
+            // ── Step 6: Compute BalForPd anchored to PeriodBeforeStart ──────
+            // GlFilterBuilder computes BalForPd from EndPeriod — correct for the
+            // activity query. But the starting balance query needs BalForPd anchored
+            // to PeriodBeforeStart so BETWEEN BalForPd AND PeriodBeforeStart is valid.
+            //
+            // Example: StartPeriod=202501, EndPeriod=202503
+            //   GlFilterBuilder BalForPd = MAX(BALFOR='B' <= 202503) = 202501
+            //   PeriodBeforeStart = 202412
+            //   Starting query with EndPeriod BalForPd: BETWEEN 202501 AND 202412 → EMPTY!
+            //   Starting query with correct BalForPd:   BETWEEN 202401 AND 202412 → OK
+            var startingBalForPd = await _balForRepository.GetBalForAnchorAsync(
+                options.DbKey,
+                EntitySelectionResolver.GetRepresentativeEntity(glParams.EntityIds),
+                periodBeforeStart);
+
+            var glParamsForStarting = new GlQueryParameters
+            {
+                LedgLo    = glParams.LedgLo,
+                LedgHi    = glParams.LedgHi,
+                BalForPd  = startingBalForPd,
+                BegYrPd   = glParams.BegYrPd,
+                EndPeriod = glParams.EndPeriod,
+                EntityIds = glParams.EntityIds,
+                BasisList = glParams.BasisList,
+            };
+
+            _logger.LogDebug(
+                "TrialBalanceDCStrategy — StartingBalForPd={BalFor} (anchored to PeriodBeforeStart={Before})",
+                startingBalForPd, periodBeforeStart);
+
+            // ── Step 7: Execute both queries ───────────────────────────────
             List<TrialBalanceDCRawRow> startingRows;
 
-            if (FiscalCalendar.ComparePeriods(periodBeforeStart, glParams.BalForPd) < 0)
+            if (FiscalCalendar.ComparePeriods(periodBeforeStart, startingBalForPd) < 0)
             {
                 // PeriodBeforeStart is before any GL data — no starting balances
                 _logger.LogDebug(
                     "TrialBalanceDCStrategy — Skipping starting balance query: " +
-                    "PeriodBeforeStart={Before} is before BalForPd={BalFor}",
-                    periodBeforeStart, glParams.BalForPd);
+                    "PeriodBeforeStart={Before} is before StartingBalForPd={BalFor}",
+                    periodBeforeStart, startingBalForPd);
                 startingRows = new List<TrialBalanceDCRawRow>();
             }
             else
             {
                 startingRows = (await _repository.GetStartingBalancesAsync(
-                    options.DbKey, glParams, periodBeforeStart)).ToList();
+                    options.DbKey, glParamsForStarting, periodBeforeStart)).ToList();
             }
 
             var activityRows = (await _repository.GetActivityAsync(
