@@ -14,31 +14,47 @@
 @inject IJSRuntime JS
 
 @*
-    ReportPage — main report page.
-    Hosts the collapsible options panel and the report display area.
-    Orchestrates report execution and routes output to screen/Excel/PDF.
+    ReportPage — side-by-side layout.
+    Left: fixed 360px options sidebar.
+    Right: report display area fills remaining width.
 *@
 
-<!-- Global loading bar -->
-@if (_isRunning)
-{
-    <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="global-loading" />
-}
+<div class="report-page-layout">
 
-<!-- Options Panel -->
-<OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
+    <!-- ── LEFT SIDEBAR — Options ──────────────────────── -->
+    <div class="report-sidebar">
+        @if (_isRunning)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-1" />
+        }
+        <OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
+    </div>
 
-<!-- Report Display Area -->
-@if (_reportResult != null)
-{
-    <ReportDisplay Result="@_reportResult" />
-}
-else if (_hasRun && !_isRunning)
-{
-    <MudAlert Severity="Severity.Info" Class="mt-2">
-        No data returned for the selected criteria.
-    </MudAlert>
-}
+    <!-- ── RIGHT CONTENT — Report ──────────────────────── -->
+    <div class="report-content">
+        @if (_reportResult != null)
+        {
+            <ReportDisplay Result="@_reportResult" />
+        }
+        else if (_hasRun && !_isRunning)
+        {
+            <MudAlert Severity="Severity.Info" Class="mt-2">
+                No data returned for the selected criteria.
+            </MudAlert>
+        }
+        else if (!_hasRun)
+        {
+            <div class="report-empty-state">
+                <MudIcon Icon="@Icons.Material.Filled.BarChart"
+                         Style="font-size:4rem; opacity:0.15;" />
+                <MudText Typo="Typo.h6" Style="opacity:0.35; margin-top:12px;">
+                    Configure options and click Display
+                </MudText>
+            </div>
+        }
+    </div>
+
+</div>
 
 @code {
     private OptionsPanel? _optionsPanel;

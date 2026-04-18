@@ -393,3 +393,49 @@ html, body {
     text-decoration: underline;
     padding: 2px 4px;
 }
+
+/* ═══════════════════════════════════════════════════
+   SIDE-BY-SIDE REPORT LAYOUT
+   ═══════════════════════════════════════════════════ */
+
+.report-page-layout {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    height: calc(100vh - 80px);   /* full height minus app bar */
+}
+
+.report-sidebar {
+    flex: 0 0 360px;              /* fixed 360px, never shrinks */
+    width: 360px;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+.report-content {
+    flex: 1 1 0;                  /* fills remaining width */
+    min-width: 0;                 /* prevents overflow */
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: auto;
+}
+
+.report-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60%;
+    color: var(--mud-palette-text-secondary);
+}
+
+/* Tighten up the options panel inside the sidebar */
+.report-sidebar .options-panel {
+    margin-bottom: 0 !important;
+}
+
+/* Remove outer padding from expansion panel in sidebar */
+.report-sidebar .mud-expand-panel {
+    border-radius: 6px;
+}
