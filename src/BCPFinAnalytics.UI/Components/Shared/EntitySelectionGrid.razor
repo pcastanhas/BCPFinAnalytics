@@ -1,124 +1,106 @@
 @using BCPFinAnalytics.Common.DTOs
 
 @*
-    EntitySelectionGrid — searchable entity/project selection component.
-    Behavior depends on Mode (SelectionMode):
-      All     → grid disabled entirely
+    EntitySelectionGrid — searchable entity selection component.
+    Client-side filtering with virtualization for performance.
+    Projects removed — entity selection only.
+
+    Mode parameter (SelectionMode):
       Include → user selects IDs to include
       Exclude → user selects IDs to exclude
       Range   → exactly 2 IDs; second must be >= first
-
-    NOTE: Parameter is named 'Mode' (not 'SelectionMode') to avoid
-    conflict with the SelectionMode type name in Blazor markup.
 *@
 
 <div class="entity-grid-container">
-        <!-- Search box -->
-        <MudTextField @bind-Value="_searchText"
-                      Placeholder="Search by ID or name..."
-                      Adornment="Adornment.Start"
-                      AdornmentIcon="@Icons.Material.Filled.Search"
-                      Immediate="true"
-                      Variant="Variant.Outlined"
-                      Margin="Margin.Dense"
-                      Class="mb-2"
-                      Disabled="@Disabled" />
+    <!-- Search box -->
+    <MudTextField @bind-Value="_searchText"
+                  Placeholder="Search by ID or name..."
+                  Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  Immediate="true"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Class="mb-2"
+                  Disabled="@Disabled" />
 
-        <!-- Entity/Project toggle -->
-        <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined" Class="mb-2">
-            <MudButton Color="@(_showEntities ? Color.Primary : Color.Default)"
-                       OnClick="() => _showEntities = true"
-                       Disabled="@Disabled">
-                Entities
-            </MudButton>
-            <MudButton Color="@(!_showEntities ? Color.Primary : Color.Default)"
-                       OnClick="() => _showEntities = false"
-                       Disabled="@Disabled">
-                Projects
-            </MudButton>
-        </MudButtonGroup>
-
-        <!-- Selection list -->
-        <div class="entity-grid @(Disabled ? "disabled" : "")">
-            @if (_filteredItems.Any())
-            {
-                @foreach (var item in _filteredItems)
-                {
+    <!-- Virtualized selection list -->
+    <div class="entity-grid @(Disabled ? "disabled" : "")">
+        @if (!_filteredItems.Any())
+        {
+            <MudText Typo="Typo.caption" Class="pa-2" Color="Color.Secondary">
+                @(Entities.Any() ? "No results found." : "Loading...")
+            </MudText>
+        }
+        else
+        {
+            <Virtualize Items="_filteredItems" Context="item" OverscanCount="10">
+                @{
                     var isSelected = SelectedIds.Contains(item.Id);
-                    <div class="entity-row @(isSelected ? "selected" : "")"
-                         @onclick="() => ToggleItem(item.Id)">
-                        <MudCheckBox Value="@isSelected"
-                                     ValueChanged="@((bool v) => ToggleItem(item.Id))"
-                                     Color="Color.Primary"
-                                     Dense="true"
-                                     Disabled="@Disabled" />
-                        <span class="entity-id">@item.Id</span>
-                        <span class="entity-name">@item.Name</span>
-                    </div>
                 }
-            }
-            else
-            {
-                <MudText Typo="Typo.caption" Class="pa-2" Color="Color.Secondary">
-                    No results found.
-                </MudText>
-            }
-        </div>
+                <div class="entity-row @(isSelected ? "selected" : "")"
+                     @onclick="() => ToggleItem(item.Id)">
+                    <MudCheckBox Value="@isSelected"
+                                 ValueChanged="@((bool v) => ToggleItem(item.Id))"
+                                 Color="Color.Primary"
+                                 Dense="true"
+                                 Disabled="@Disabled" />
+                    <span class="entity-id">@item.Id</span>
+                    <span class="entity-name">@item.Name</span>
+                </div>
+            </Virtualize>
+        }
+    </div>
 
-        <!-- Selection summary and validation -->
-        <div class="entity-selection-summary mt-1">
-            @if (Mode == BCPFinAnalytics.Common.Enums.SelectionMode.Range)
+    <!-- Selection summary and validation -->
+    <div class="entity-selection-summary mt-1">
+        @if (Mode == BCPFinAnalytics.Common.Enums.SelectionMode.Range)
+        {
+            @if (SelectedIds.Count == 0)
             {
-                @if (SelectedIds.Count == 0)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">Select exactly 2 items for range.</MudText>
-                }
-                else if (SelectedIds.Count == 1)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Warning">Select 1 more item for range.</MudText>
-                }
-                else if (SelectedIds.Count == 2)
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Success">
-                        Range: @SelectedIds[0] → @SelectedIds[1]
-                    </MudText>
-                }
-                else
-                {
-                    <MudText Typo="Typo.caption" Color="Color.Error">Range requires exactly 2 items.</MudText>
-                }
+                <MudText Typo="Typo.caption" Color="Color.Secondary">Select exactly 2 items for range.</MudText>
+            }
+            else if (SelectedIds.Count == 1)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Warning">Select 1 more item for range.</MudText>
+            }
+            else if (SelectedIds.Count == 2)
+            {
+                <MudText Typo="Typo.caption" Color="Color.Success">
+                    Range: @SelectedIds[0] → @SelectedIds[1]
+                </MudText>
             }
             else
             {
-                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                    @SelectedIds.Count item(s) selected
-                </MudText>
+                <MudText Typo="Typo.caption" Color="Color.Error">Range requires exactly 2 items.</MudText>
             }
-        </div>
+        }
+        else
+        {
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                @SelectedIds.Count item(s) selected
+            </MudText>
+        }
+    </div>
 </div>
+
 @code {
-    /// <summary>
-    /// Named 'Mode' rather than 'SelectionMode' to avoid conflict
-    /// between the parameter name and the SelectionMode type in Blazor markup.
-    /// </summary>
-    [Parameter] public BCPFinAnalytics.Common.Enums.SelectionMode Mode { get; set; } = BCPFinAnalytics.Common.Enums.SelectionMode.Include;
+    [Parameter] public BCPFinAnalytics.Common.Enums.SelectionMode Mode { get; set; }
+        = BCPFinAnalytics.Common.Enums.SelectionMode.Include;
     [Parameter] public List<string> SelectedIds { get; set; } = new();
     [Parameter] public EventCallback<List<string>> SelectedIdsChanged { get; set; }
     [Parameter] public List<EntityDto> Entities { get; set; } = new();
-    [Parameter] public List<ProjectDto> Projects { get; set; } = new();
     [Parameter] public bool Disabled { get; set; } = false;
 
     private string _searchText = string.Empty;
-    private bool _showEntities = true;
 
     private record SelectionItem(string Id, string Name);
 
-    private IEnumerable<SelectionItem> _filteredItems => (_showEntities
-        ? Entities.Select(e => new SelectionItem(e.EntityId, e.Name))
-        : Projects.Select(p => new SelectionItem(p.ProjId, p.Name)))
+    private List<SelectionItem> _filteredItems => Entities
+        .Select(e => new SelectionItem(e.EntityId, e.Name))
         .Where(i => string.IsNullOrEmpty(_searchText)
             || i.Id.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
-            || i.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+            || i.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+        .ToList();
 
     private async Task ToggleItem(string id)
     {
@@ -129,9 +111,7 @@
         if (Mode == BCPFinAnalytics.Common.Enums.SelectionMode.Range)
         {
             if (current.Contains(id))
-            {
                 current.Remove(id);
-            }
             else
             {
                 if (current.Count >= 2) current.Clear();
@@ -148,12 +128,11 @@
         await SelectedIdsChanged.InvokeAsync(current);
     }
 
-    /// <summary>Validates selection based on current mode.</summary>
     public bool IsValid => Mode switch
     {
         BCPFinAnalytics.Common.Enums.SelectionMode.Include => SelectedIds.Any(),
         BCPFinAnalytics.Common.Enums.SelectionMode.Exclude => SelectedIds.Any(),
         BCPFinAnalytics.Common.Enums.SelectionMode.Range   => SelectedIds.Count == 2,
-        _                        => false
+        _                                                  => false
     };
 }

@@ -21,21 +21,19 @@
     Emits ReportOptions when the user clicks Display/Excel/PDF.
 *@
 
-<MudPaper Class="options-panel mb-3 pa-3" Elevation="2">
-    <MudText Typo="Typo.h6" Class="mb-2">
-        <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-1" />
-        Report Options
-    </MudText>
+<MudExpansionPanels Class="options-panel mb-3" Elevation="2">
+    <MudExpansionPanel Text="Report Options"
+                       @bind-Expanded="_panelExpanded"
+                       Icon="@Icons.Material.Filled.Tune">
 
-        @if (_loading)
-        {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-        }
-        else if (!string.IsNullOrEmpty(_loadError))
+        @if (!string.IsNullOrEmpty(_loadError))
         {
             <MudAlert Severity="Severity.Error" Class="ma-2">@_loadError</MudAlert>
         }
-        else
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+        }
         {
             <MudGrid Spacing="2" Class="pa-2">
 
@@ -194,7 +192,7 @@
                         <!-- Selection Mode radio group -->
                         <MudItem xs="12">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
-                                Entity / Project Selection
+                                Entity Selection
                             </MudText>
                             <MudRadioGroup T="BCPFinAnalytics.Common.Enums.SelectionMode"
                                            Value="@_options.SelectionMode"
@@ -226,7 +224,6 @@
                                                  SelectedIds="@_options.SelectedIds"
                                                  SelectedIdsChanged="ids => _options.SelectedIds = ids"
                                                  Entities="@_entities"
-                                                 Projects="@_projects"
                                                  Disabled="@(!_config.EntitySelectionEnabled)" />
                         </MudItem>
 
@@ -255,9 +252,9 @@
                        OnPdf="@OnPdf"
                        OnSave="@OnSave"
                        OnClear="@OnClear" />
-        }
 
-</MudPaper>
+    </MudExpansionPanel>
+</MudExpansionPanels>
 
 @code {
     [Parameter] public EventCallback<(ReportOptions Options, OutputFormat Format)> OnRunReport { get; set; }
@@ -270,7 +267,6 @@
     private List<SFTypeDto> _sfTypes = new();
     private List<BasisDto> _basisItems = new();
     private List<EntityDto> _entities = new();
-    private List<ProjectDto> _projects = new();
     private List<GLDto> _gls = new();
     private List<SavedSettingDto> _savedSettings = new();
 
@@ -287,47 +283,47 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Show UI immediately — _loading=true disables controls but doesn't hide them
+        // Load all lookups in parallel — reduces 10-15s sequential wait to ~2-3s
         Logger.LogInformation("OptionsPanel initializing — DbKey={DbKey}", UserSession.DbKey);
+        _reportTypes = StrategyResolver.GetAllReportTypes().ToList();
+
         try
         {
-            var r1 = await LookupService.GetFormatsAsync(UserSession.DbKey);
-            if (r1.IsSuccess) _formats = r1.Data!.ToList();
-            else { _loadError = $"Failed to load formats: {r1.ErrorMessage}"; return; }
+            // Run all independent DB calls in parallel
+            var tFormats  = LookupService.GetFormatsAsync(UserSession.DbKey);
+            var tBudgets  = LookupService.GetBudgetsAsync(UserSession.DbKey);
+            var tSFTypes  = LookupService.GetSFTypesAsync(UserSession.DbKey);
+            var tBasis    = LookupService.GetBasisAsync(UserSession.DbKey);
+            var tEntities = LookupService.GetEntitiesAsync(UserSession.DbKey);
+            var tGLs      = LookupService.GetGLsAsync(UserSession.DbKey);
+            var tSettings = SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId);
 
-            var r2 = await LookupService.GetBudgetsAsync(UserSession.DbKey);
-            if (r2.IsSuccess) _budgets = r2.Data!.ToList();
+            await Task.WhenAll(tFormats, tBudgets, tSFTypes, tBasis, tEntities, tGLs, tSettings);
 
-            var r3 = await LookupService.GetSFTypesAsync(UserSession.DbKey);
-            if (r3.IsSuccess) _sfTypes = r3.Data!.ToList();
+            // Assign results on dispatcher thread (we're back here after WhenAll)
+            if (tFormats.Result.IsSuccess)  _formats      = tFormats.Result.Data!.ToList();
+            else _loadError = $"Failed to load formats: {tFormats.Result.ErrorMessage}";
 
-            var r4 = await LookupService.GetBasisAsync(UserSession.DbKey);
-            if (r4.IsSuccess) _basisItems = r4.Data!.ToList();
+            if (tBudgets.Result.IsSuccess)  _budgets      = tBudgets.Result.Data!.ToList();
+            if (tSFTypes.Result.IsSuccess)  _sfTypes      = tSFTypes.Result.Data!.ToList();
+            if (tBasis.Result.IsSuccess)    _basisItems   = tBasis.Result.Data!.ToList();
+            if (tEntities.Result.IsSuccess) _entities     = tEntities.Result.Data!.ToList();
+            if (tSettings.Result.IsSuccess) _savedSettings = tSettings.Result.Data!.ToList();
 
-            var r5 = await LookupService.GetEntitiesAsync(UserSession.DbKey);
-            if (r5.IsSuccess) _entities = r5.Data!.ToList();
-
-            var r6 = await LookupService.GetProjectsAsync(UserSession.DbKey);
-            if (r6.IsSuccess) _projects = r6.Data!.ToList();
-
-            var r7 = await LookupService.GetGLsAsync(UserSession.DbKey);
-            if (r7.IsSuccess) _gls = r7.Data!.ToList();
-            else { _loadError = $"Failed to load GLs: {r7.ErrorMessage}"; return; }
-
-            var r8 = await SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId);
-            if (r8.IsSuccess) _savedSettings = r8.Data!.ToList();
-
-            _reportTypes = StrategyResolver.GetAllReportTypes().ToList();
-
-            if (string.IsNullOrEmpty(_options.LedgCode) && _gls.Count > 0)
-                _options.LedgCode = _gls[0].LedgCode;
+            if (tGLs.Result.IsSuccess)
+            {
+                _gls = tGLs.Result.Data!.ToList();
+                if (string.IsNullOrEmpty(_options.LedgCode) && _gls.Count > 0)
+                    _options.LedgCode = _gls[0].LedgCode;
+            }
+            else _loadError = $"Failed to load GLs: {tGLs.Result.ErrorMessage}";
 
             Logger.LogInformation(
-                "OptionsPanel loaded — ReportTypes={RT} Formats={F} Budgets={B} " +
-                "SFTypes={S} Basis={Ba} Entities={E} Projects={P} GLs={G} " +
-                "SavedSettings={SS} DefaultLedgCode={L}",
-                _reportTypes.Count, _formats.Count, _budgets.Count, _sfTypes.Count,
-                _basisItems.Count, _entities.Count, _projects.Count, _gls.Count,
-                _savedSettings.Count, _options.LedgCode);
+                "OptionsPanel loaded — Formats={F} Budgets={B} SFTypes={S} " +
+                "Basis={Ba} Entities={E} GLs={G} SavedSettings={SS}",
+                _formats.Count, _budgets.Count, _sfTypes.Count,
+                _basisItems.Count, _entities.Count, _gls.Count, _savedSettings.Count);
         }
         catch (Exception ex)
         {
