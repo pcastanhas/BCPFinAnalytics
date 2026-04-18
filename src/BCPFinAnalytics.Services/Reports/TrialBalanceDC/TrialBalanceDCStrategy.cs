@@ -603,8 +603,8 @@ public class TrialBalanceDCStrategy : IReportStrategy
     {
         var result = amount;
         if (fmtRow.DebCred == "C")   result = -result;
-        if (fmtRow.Options.FlipSign)  result = -result;
-        if (fmtRow.Options.ReverseSign) result = -result;
+        if (fmtRow.Options.ReverseVariance)  result = -result;
+        if (fmtRow.Options.ReverseAmount) result = -result;
         return result;
     }
 

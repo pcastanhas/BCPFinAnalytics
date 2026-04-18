@@ -231,11 +231,11 @@ public class IncomeStatementStrategy : IReportStrategy
                         // Display with sign applied, store raw for TO
                         var sPtdA = ApplySign(grpPtdA, fmtRow);
                         var sPtdB = ApplySign(grpPtdB, fmtRow);
-                        var sPtdV = sPtdA - sPtdB;
+                        var sPtdV = CalcVariance(sPtdA, sPtdB, fmtRow);
                         var sPtdP = CalcVarPct(sPtdV, sPtdB);
                         var sYtdA = ApplySign(grpYtdA, fmtRow);
                         var sYtdB = ApplySign(grpYtdB, fmtRow);
-                        var sYtdV = sYtdA - sYtdB;
+                        var sYtdV = CalcVariance(sYtdA, sYtdB, fmtRow);
                         var sYtdP = CalcVarPct(sYtdV, sYtdB);
 
                         subtotalAccs[fmtRow.SubtotId] = (grpPtdA, grpPtdB, grpYtdA, grpYtdB);
@@ -264,11 +264,11 @@ public class IncomeStatementStrategy : IReportStrategy
 
                         var gPtdA = ApplySign(gtPtdA, fmtRow);
                         var gPtdB = ApplySign(gtPtdB, fmtRow);
-                        var gPtdV = gPtdA - gPtdB;
+                        var gPtdV = CalcVariance(gPtdA, gPtdB, fmtRow);
                         var gPtdP = CalcVarPct(gPtdV, gPtdB);
                         var gYtdA = ApplySign(gtYtdA, fmtRow);
                         var gYtdB = ApplySign(gtYtdB, fmtRow);
-                        var gYtdV = gYtdA - gYtdB;
+                        var gYtdV = CalcVariance(gYtdA, gYtdB, fmtRow);
                         var gYtdP = CalcVarPct(gYtdV, gYtdB);
 
                         var suppress = fmtRow.Options.SuppressIfZero
@@ -432,11 +432,11 @@ public class IncomeStatementStrategy : IReportStrategy
         {
             var sPtdA = ApplySign(data.PtdActual, fmtRow);
             var sPtdB = ApplySign(data.PtdBudget, fmtRow);
-            var sPtdV = sPtdA - sPtdB;
+            var sPtdV = CalcVariance(sPtdA, sPtdB, fmtRow);
             var sPtdP = CalcVarPct(sPtdV, sPtdB);
             var sYtdA = ApplySign(data.YtdActual, fmtRow);
             var sYtdB = ApplySign(data.YtdBudget, fmtRow);
-            var sYtdV = sYtdA - sYtdB;
+            var sYtdV = CalcVariance(sYtdA, sYtdB, fmtRow);
             var sYtdP = CalcVarPct(sYtdV, sYtdB);
 
             // Accumulate raw for SU/TO math
@@ -519,6 +519,9 @@ public class IncomeStatementStrategy : IReportStrategy
         grpYtdA += rawYtdA;
         grpYtdB += rawYtdB;
 
+        var smPtdV = CalcVariance(sPtdA, sPtdB, fmtRow);
+        var smYtdV = CalcVariance(sYtdA, sYtdB, fmtRow);
+
         return new ReportRow
         {
             RowType     = RowType.Detail,
@@ -526,8 +529,8 @@ public class IncomeStatementStrategy : IReportStrategy
             AccountName = fmtRow.Label,
             Indent      = 1,
             Cells       = BuildCells(
-                sPtdA, sPtdB, sPtdA - sPtdB, CalcVarPct(sPtdA - sPtdB, sPtdB),
-                sYtdA, sYtdB, sYtdA - sYtdB, CalcVarPct(sYtdA - sYtdB, sYtdB),
+                sPtdA, sPtdB, smPtdV, CalcVarPct(smPtdV, sPtdB),
+                sYtdA, sYtdB, smYtdV, CalcVarPct(smYtdV, sYtdB),
                 wholeDollars)
         };
     }
@@ -536,13 +539,29 @@ public class IncomeStatementStrategy : IReportStrategy
     //  Helpers
     // ══════════════════════════════════════════════════════════════
 
+    /// <summary>
+    /// Applies display sign to an actual or budget amount.
+    /// Only DEBCRED and O=R (ReverseAmount) affect the displayed amount.
+    /// O=^ (ReverseVariance) affects variance direction only — not the amount display.
+    /// </summary>
     private static decimal ApplySign(decimal amount, FormatRow fmtRow)
     {
         var result = amount;
-        if (fmtRow.DebCred == "C")          result = -result;
-        if (fmtRow.Options.FlipSign)        result = -result;
-        if (fmtRow.Options.ReverseSign)     result = -result;
+        if (fmtRow.DebCred == "C")              result = -result;  // C=Credit → negate
+        if (fmtRow.Options.ReverseAmount)       result = -result;  // O=R → reverse amount
         return result;
+    }
+
+    /// <summary>
+    /// Calculates variance with direction determined by O=^ (ReverseVariance).
+    /// Normal:  Actual - Budget  (positive = spent more / earned more than budget)
+    /// Reversed: Budget - Actual (positive = favorable for expenses: under budget)
+    /// </summary>
+    private static decimal CalcVariance(decimal actual, decimal budget, FormatRow fmtRow)
+    {
+        return fmtRow.Options.ReverseVariance
+            ? budget - actual
+            : actual - budget;
     }
 
     /// <summary>

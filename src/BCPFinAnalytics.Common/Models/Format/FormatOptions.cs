@@ -7,7 +7,9 @@ namespace BCPFinAnalytics.Common.Models.Format;
 /// Each character is an independent flag — they can appear in any combination and order.
 ///
 /// Parsing rule: walk the string character by character, set the corresponding flag.
-/// Double-caret (^^) = FlipSign applied twice = net zero effect (seen in cash flow formats).
+/// O=^ = ReverseVariance: reverses variance direction (Budget-Actual instead of Actual-Budget).
+/// O=R = ReverseAmount: reverses the displayed amount (negates for display).
+/// Double-caret (^^) = ReverseVariance applied twice = net zero effect (seen in cash flow formats).
 /// </summary>
 public sealed record FormatOptions
 {
@@ -16,13 +18,22 @@ public sealed record FormatOptions
     /// Used on credit-normal accounts (income/revenue) so they display as positive numbers.
     /// GL stores income as credits (negative); ^ makes them show as positive.
     /// </summary>
-    public bool FlipSign { get; init; }
+    /// <summary>
+    /// O=^ flag. Reverses variance direction for income statement reports.
+    /// Normal: Actual - Budget. Reversed: Budget - Actual.
+    /// Does NOT affect the displayed actual or budget amounts.
+    /// </summary>
+    public bool ReverseVariance { get; init; }
 
     /// <summary>
     /// R — Reverse sign. Reverse the display sign relative to DEBCRED convention.
     /// Used on liability/equity rows in balance sheet formats.
     /// </summary>
-    public bool ReverseSign { get; init; }
+    /// <summary>
+    /// O=R flag. Reverses (negates) the displayed amount for this row.
+    /// Applied in ApplySign() for actual and budget column display.
+    /// </summary>
+    public bool ReverseAmount { get; init; }
 
     /// <summary>
     /// S — Suppress if zero. Hide this row if its computed value is zero.
@@ -62,7 +73,7 @@ public sealed record FormatOptions
     /// <summary>
     /// Parses the raw O= flag string from LINEDEF into a FormatOptions record.
     /// Handles null/empty input gracefully — returns FormatOptions.None.
-    /// Double-caret (^^) nets to zero FlipSign (two negations cancel out).
+    /// Double-caret (^^) nets to zero ReverseVariance (two negations cancel out).
     /// </summary>
     public static FormatOptions Parse(string? raw)
     {
@@ -96,8 +107,8 @@ public sealed record FormatOptions
 
         return new FormatOptions
         {
-            FlipSign             = flipSign,
-            ReverseSign          = reverseSign,
+            ReverseVariance             = flipSign,
+            ReverseAmount          = reverseSign,
             SuppressIfZero       = suppressIfZero,
             SuppressZeroSubtotal = suppressZeroSubtotal,
             Expand               = expand,

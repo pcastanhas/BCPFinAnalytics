@@ -515,8 +515,8 @@ public class TrialBalanceStrategy : IReportStrategy
     /// Sign pipeline:
     ///   1. Start with raw GL amount
     ///   2. If DEBCRED='C': negate (credit-normal account)
-    ///   3. If O=^ (FlipSign): negate again
-    ///   4. If O=R (ReverseSign): negate
+    ///   3. If O=^ (ReverseVariance): negate again
+    ///   4. If O=R (ReverseAmount): negate
     /// </summary>
     private static decimal ApplySign(decimal amount, FormatRow fmtRow)
     {
@@ -525,10 +525,10 @@ public class TrialBalanceStrategy : IReportStrategy
         if (fmtRow.DebCred == "C")
             result = -result;
 
-        if (fmtRow.Options.FlipSign)
+        if (fmtRow.Options.ReverseVariance)
             result = -result;
 
-        if (fmtRow.Options.ReverseSign)
+        if (fmtRow.Options.ReverseAmount)
             result = -result;
 
         return result;
