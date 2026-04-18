@@ -375,8 +375,7 @@
         _options.StartPeriod = saved.StartPeriod;
         _options.EndPeriod   = saved.EndPeriod;
         _options.Format      = saved.Format;
-        _options.LedgCode    = !string.IsNullOrEmpty(saved.LedgCode) ? saved.LedgCode
-                               : (_gls.Count > 0 ? _gls[0].LedgCode : string.Empty);
+        _options.LedgCode    = saved.LedgCode ?? string.Empty;  // restored from saved; overridden by preflight
         _options.Budget      = saved.Budget;
         _options.SFType      = saved.SFType;
         _options.WholeDollars = saved.WholeDollars;
@@ -437,9 +436,9 @@
         _selectedSettingId = null;
 
         // Re-apply the default GL — must always be populated.
-        if (_gls.Count > 0) _options.LedgCode = _gls[0].LedgCode;
+        _options.LedgCode = string.Empty;  // derived from entities at preflight
 
-        Logger.LogDebug("OptionsPanel — options cleared, LedgCode reset to {LedgCode}", _options.LedgCode);
+        Logger.LogDebug("OptionsPanel — options cleared");
     }
 
     /// <summary>Returns current options as SavedSettingOptions for the Save modal.</summary>
