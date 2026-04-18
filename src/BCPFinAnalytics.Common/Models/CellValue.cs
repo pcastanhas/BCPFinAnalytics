@@ -35,6 +35,13 @@ public readonly record struct CellValue
     /// </summary>
     public DrillDownRef? DrillDown { get; init; }
 
+    /// <summary>
+    /// Optional CSS class for cell-level styling (e.g. variance color coding).
+    /// Rendered as a class on the td element.
+    /// e.g. "variance-green", "variance-yellow", "variance-red"
+    /// </summary>
+    public string? CssClass { get; init; }
+
     /// <summary>True when this cell supports drill-down to GL detail.</summary>
     public bool IsDrillable => DrillDown is not null;
 

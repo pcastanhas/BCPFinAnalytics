@@ -75,7 +75,7 @@
                     @foreach (var col in Result.Columns)
                     {
                         var cell = row.Cells.TryGetValue(col.ColumnId, out var cv) ? cv : CellValue.Empty;
-                        <td class="numeric @(cell.IsDrillable ? "drillable" : "")">
+                        <td class="numeric @(cell.IsDrillable ? "drillable" : "") @(cell.CssClass ?? "")">
                             @if (cell.IsDrillable)
                             {
                                 <span class="drill-link"

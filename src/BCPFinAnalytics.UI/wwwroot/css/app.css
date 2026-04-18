@@ -588,3 +588,22 @@ html, body {
     box-sizing: border-box !important;
 }
 
+
+/* ═══════════════════════════════════════════════════
+   VARIANCE COLOR CODING
+   ═══════════════════════════════════════════════════ */
+
+.variance-green {
+    color: #1b5e20 !important;
+    font-weight: 600;
+}
+
+.variance-yellow {
+    color: #e65100 !important;
+    font-weight: 600;
+}
+
+.variance-red {
+    color: #b71c1c !important;
+    font-weight: 600;
+}
