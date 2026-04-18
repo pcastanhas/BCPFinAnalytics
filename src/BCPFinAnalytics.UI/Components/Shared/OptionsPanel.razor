@@ -30,6 +30,10 @@
         {
             <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
         }
+        else if (!string.IsNullOrEmpty(_loadError))
+        {
+            <MudAlert Severity="Severity.Error" Class="ma-2">@_loadError</MudAlert>
+        }
         else
         {
             <MudGrid Spacing="2" Class="pa-2">
@@ -279,6 +283,8 @@
 
     public enum OutputFormat { Screen, Excel, Pdf }
 
+    private string _loadError = string.Empty;
+
     protected override async Task OnInitializedAsync()
     {
         Logger.LogInformation("OptionsPanel initializing — loading lookup data for DbKey={DbKey}",
@@ -286,6 +292,11 @@
         try
         {
             await LoadLookupsAsync();
+        }
+        catch (Exception ex)
+        {
+            _loadError = $"Failed to load options: {ex.Message}";
+            Logger.LogError(ex, "OptionsPanel.OnInitializedAsync FAILED: {Message}", ex.Message);
         }
         finally
         {
