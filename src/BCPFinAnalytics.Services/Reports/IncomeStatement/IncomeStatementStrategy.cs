@@ -213,6 +213,7 @@ public class IncomeStatementStrategy : IReportStrategy
                         grpPtdA = grpPtdB = grpYtdA = grpYtdB = 0;
                         var raRows = BuildRangeRows(
                             fmtRow, combined, glParams, glInfo, options.WholeDollars,
+                            startPeriod,
                             ref grpPtdA, ref grpPtdB, ref grpYtdA, ref grpYtdB);
                         reportRows.AddRange(raRows);
                         break;
@@ -420,6 +421,7 @@ public class IncomeStatementStrategy : IReportStrategy
         GlQueryParameters glParams,
         GLDto glInfo,
         bool wholeDollars,
+        string startPeriod,
         ref decimal grpPtdA, ref decimal grpPtdB,
         ref decimal grpYtdA, ref decimal grpYtdB)
     {
@@ -446,17 +448,28 @@ public class IncomeStatementStrategy : IReportStrategy
             var formattedAcct = AccountNumberFormatter.Format(
                 acctNum, glInfo.AcctLgt, glInfo.AcctDsp);
 
-            // Drill-down on PTD Actual and YTD Actual only
-            // Budget drill-down is a placeholder for a future task
+            // PTD drill-down: activity in the user-selected period range only
             var ptdDrill = new DrillDownRef
             {
-                AcctNums     = new[] { acctNum },
-                EntityIds    = glParams.EntityIds,
-                PeriodFrom   = glParams.BegYrPd,
-                PeriodTo     = glParams.EndPeriod,
-                BasisList    = glParams.BasisList,
-                DisplayLabel = $"{formattedAcct} · {data.AcctName}",
+                AcctNums      = new[] { acctNum },
+                EntityIds     = glParams.EntityIds,
+                PeriodFrom    = startPeriod,
+                PeriodTo      = glParams.EndPeriod,
+                BasisList     = glParams.BasisList,
+                DisplayLabel  = $"{formattedAcct} · {data.AcctName} (PTD)",
                 EndingBalance = sPtdA
+            };
+
+            // YTD drill-down: activity from beginning of year to end period
+            var ytdDrill = new DrillDownRef
+            {
+                AcctNums      = new[] { acctNum },
+                EntityIds     = glParams.EntityIds,
+                PeriodFrom    = glParams.BegYrPd,
+                PeriodTo      = glParams.EndPeriod,
+                BasisList     = glParams.BasisList,
+                DisplayLabel  = $"{formattedAcct} · {data.AcctName} (YTD)",
+                EndingBalance = sYtdA
             };
 
             var cells = BuildCells(
@@ -464,11 +477,11 @@ public class IncomeStatementStrategy : IReportStrategy
                 sYtdA, sYtdB, sYtdV, sYtdP,
                 wholeDollars);
 
-            // Wire drill-down to actual columns
+            // Wire separate drill-downs to PTD and YTD actual columns
             if (cells[ColPtdActual].Amount.HasValue)
                 cells[ColPtdActual] = cells[ColPtdActual] with { DrillDown = ptdDrill };
             if (cells[ColYtdActual].Amount.HasValue)
-                cells[ColYtdActual] = cells[ColYtdActual] with { DrillDown = ptdDrill };
+                cells[ColYtdActual] = cells[ColYtdActual] with { DrillDown = ytdDrill };
 
             rows.Add(new ReportRow
             {

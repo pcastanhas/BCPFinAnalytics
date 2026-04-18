@@ -37,6 +37,47 @@ public static class ReportPostProcessor
 
         if (options.SuppressInactiveSubtotals)
             SuppressZeroSubtotalRows(rows);
+
+        // Always suppress orphaned section headers — headers with no
+        // detail or total rows following before the next header/end.
+        SuppressOrphanedHeaders(rows);
+    }
+
+    /// <summary>
+    /// Removes SectionHeader rows that have no Detail or Total rows
+    /// between them and the next SectionHeader (or end of list).
+    /// This cleans up sections that were entirely suppressed by other rules.
+    /// </summary>
+    private static void SuppressOrphanedHeaders(List<ReportRow> rows)
+    {
+        var toRemove = new HashSet<int>();
+
+        for (int i = 0; i < rows.Count; i++)
+        {
+            if (rows[i].RowType != RowType.SectionHeader) continue;
+            if (string.IsNullOrWhiteSpace(rows[i].AccountName)) continue; // blank spacer
+
+            // Look ahead for any non-header, non-blank content before next header
+            bool hasContent = false;
+            for (int j = i + 1; j < rows.Count; j++)
+            {
+                var rt = rows[j].RowType;
+                if (rt == RowType.SectionHeader && !string.IsNullOrWhiteSpace(rows[j].AccountName))
+                    break; // hit next real header — stop looking
+                if (rt == RowType.Detail || rt == RowType.Total || rt == RowType.GrandTotal)
+                {
+                    hasContent = true;
+                    break;
+                }
+            }
+
+            if (!hasContent)
+                toRemove.Add(i);
+        }
+
+        // Remove in reverse order to preserve indices
+        foreach (var idx in toRemove.OrderByDescending(x => x))
+            rows.RemoveAt(idx);
     }
 
     /// <summary>
