@@ -280,8 +280,9 @@
             hCell.Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Medium;
         }
 
-        // Data rows starting at row 5
+        // Starting/ending balance rows + data rows
         int row = 5;
+        if (DrillDown.StartingBalance.HasValue) { var c=ws.Cell(row,11); c.Value="Starting Balance"; c.Style.Font.Bold=true; c.Style.Fill.BackgroundColor=ClosedXML.Excel.XLColor.FromHtml("#DEEAF1"); var d=ws.Cell(row,12); d.Value=(double)DrillDown.StartingBalance.Value; d.Style.Font.Bold=true; d.Style.NumberFormat.Format=@"#,##0.00_);(#,##0.00);\"-\""; d.Style.Alignment.Horizontal=ClosedXML.Excel.XLAlignmentHorizontalValues.Right; d.Style.Fill.BackgroundColor=ClosedXML.Excel.XLColor.FromHtml("#DEEAF1"); row++; }
         foreach (var r in _rows)
         {
             ws.Cell(row, 1).Value  = FormatPeriod(r.Period);
