@@ -294,12 +294,12 @@ public class IncomeStatementStrategy : IReportStrategy
 
             var columns = new List<ReportColumn>
             {
-                new() { ColumnId = ColPtdActual, Header = $"PTD Actual\n{ptdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
-                new() { ColumnId = ColPtdBudget, Header = $"PTD Budget\n{ptdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColPtdActual, Header = "PTD Actual",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColPtdBudget, Header = "PTD Budget",  Width = 120, DataType = ColumnDataType.Currency },
                 new() { ColumnId = ColPtdVar,    Header = "PTD Variance",              Width = 120, DataType = ColumnDataType.Currency },
                 new() { ColumnId = ColPtdVarPct, Header = "PTD Var %",                Width = 80,  DataType = ColumnDataType.Percent   },
-                new() { ColumnId = ColYtdActual, Header = $"YTD Actual\n{ytdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
-                new() { ColumnId = ColYtdBudget, Header = $"YTD Budget\n{ytdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColYtdActual, Header = "YTD Actual",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColYtdBudget, Header = "YTD Budget",  Width = 120, DataType = ColumnDataType.Currency },
                 new() { ColumnId = ColYtdVar,    Header = "YTD Variance",              Width = 120, DataType = ColumnDataType.Currency },
                 new() { ColumnId = ColYtdVarPct, Header = "YTD Var %",                Width = 80,  DataType = ColumnDataType.Percent   },
             };
@@ -387,11 +387,11 @@ public class IncomeStatementStrategy : IReportStrategy
 
         var cells = new Dictionary<string, CellValue>
         {
-            [ColPtdActual] = new(ptdA == 0m ? null : Round(ptdA)),
+            [ColPtdActual] = new(Round(ptdA)),                        // always show — drill-down on zero
             [ColPtdBudget] = new(ptdB == 0m ? null : Round(ptdB)),
             [ColPtdVar]    = new(ptdV == 0m ? null : Round(ptdV)),
             [ColPtdVarPct] = BuildVarPctCell(ptdP),
-            [ColYtdActual] = new(ytdA == 0m ? null : Round(ytdA)),
+            [ColYtdActual] = new(Round(ytdA)),                        // always show — drill-down on zero
             [ColYtdBudget] = new(ytdB == 0m ? null : Round(ytdB)),
             [ColYtdVar]    = new(ytdV == 0m ? null : Round(ytdV)),
             [ColYtdVarPct] = BuildVarPctCell(ytdP),
@@ -477,11 +477,9 @@ public class IncomeStatementStrategy : IReportStrategy
                 sYtdA, sYtdB, sYtdV, sYtdP,
                 wholeDollars);
 
-            // Wire separate drill-downs to PTD and YTD actual columns
-            if (cells[ColPtdActual].Amount.HasValue)
-                cells[ColPtdActual] = cells[ColPtdActual] with { DrillDown = ptdDrill };
-            if (cells[ColYtdActual].Amount.HasValue)
-                cells[ColYtdActual] = cells[ColYtdActual] with { DrillDown = ytdDrill };
+            // Wire drill-downs — attach even if amount is zero so user can verify
+            cells[ColPtdActual] = cells[ColPtdActual] with { DrillDown = ptdDrill };
+            cells[ColYtdActual] = cells[ColYtdActual] with { DrillDown = ytdDrill };
 
             rows.Add(new ReportRow
             {
