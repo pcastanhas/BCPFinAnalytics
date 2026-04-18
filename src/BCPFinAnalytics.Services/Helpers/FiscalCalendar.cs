@@ -33,11 +33,19 @@ public static class FiscalCalendar
     /// </summary>
     public static string ToMriPeriod(string mmYyyy)
     {
-        if (string.IsNullOrWhiteSpace(mmYyyy) || mmYyyy.Length != 7 || mmYyyy[2] != '/')
+        if (string.IsNullOrWhiteSpace(mmYyyy))
+            throw new ArgumentException("Period cannot be null or empty.", nameof(mmYyyy));
+
+        // Already in YYYYMM format — return as-is
+        if (mmYyyy.Length == 6 && !mmYyyy.Contains('/'))
+            return mmYyyy;
+
+        // Expected MM/YYYY format
+        if (mmYyyy.Length != 7 || mmYyyy[2] != '/')
             throw new ArgumentException(
                 $"Period must be in MM/YYYY format. Received: '{mmYyyy}'", nameof(mmYyyy));
 
-        var mm = mmYyyy.Substring(0, 2);
+        var mm   = mmYyyy.Substring(0, 2);
         var yyyy = mmYyyy.Substring(3, 4);
         return $"{yyyy}{mm}";
     }

@@ -47,10 +47,16 @@
             return;
         }
 
-        // Auto-format: if user typed 6 digits without slash e.g. "012025" → "01/2025"
+        // Auto-format: if user typed 6 digits without slash
+        // "012025" → "01/2025"  (MMYYYY)
+        // "202501" → "01/2025"  (YYYYMM — user typed year first)
         if (_displayValue.Length == 6 && !_displayValue.Contains('/'))
         {
-            _displayValue = _displayValue.Insert(2, "/");
+            // Detect YYYYMM: first 4 chars look like a year (>= 1900)
+            if (int.TryParse(_displayValue.Substring(0, 4), out var yr) && yr >= 1900)
+                _displayValue = _displayValue.Substring(4, 2) + "/" + _displayValue.Substring(0, 4);
+            else
+                _displayValue = _displayValue.Insert(2, "/");
         }
 
         if (!PeriodRegex.IsMatch(_displayValue))
