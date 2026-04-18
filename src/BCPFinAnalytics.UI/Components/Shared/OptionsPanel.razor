@@ -21,6 +21,18 @@
     Emits ReportOptions when the user clicks Display/Excel/PDF.
 *@
 
+<!-- ═══ STICKY ACTION BAR ══════════════════════════════════ -->
+<div class="options-action-bar">
+    <ButtonRow Options="@_options"
+               Config="@_config"
+               IsRunning="@IsRunning"
+               OnDisplay="@OnDisplay"
+               OnExcel="@OnExcel"
+               OnPdf="@OnPdf"
+               OnSave="@OnSave"
+               OnClear="@OnClear" />
+</div>
+
 <MudExpansionPanels Class="options-panel mb-3" Elevation="2">
     <MudExpansionPanel Text="Report Options"
                        @bind-Expanded="_panelExpanded"
@@ -37,23 +49,34 @@
 
             <MudGrid Spacing="2" Class="pa-2">
 
-                        <!-- Saved Settings -->
+                        <!-- Saved Settings + Save icon -->
                         <MudItem xs="12">
-                            <MudSelect T="int?"
-                                       Label="Saved Settings"
-                                       Value="_selectedSettingId"
-                                       ValueChanged="OnSavedSettingChanged"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense"
-                                       Clearable="true"
-                                       AdornmentIcon="@Icons.Material.Filled.Bookmark">
-                                @foreach (var s in _savedSettings)
-                                {
-                                    <MudSelectItem T="int?" Value="@((int?)s.SettingId)">
-                                        @s.SettingName @(s.IsPublic ? "🌐" : "🔒")
-                                    </MudSelectItem>
-                                }
-                            </MudSelect>
+                            <div class="saved-settings-row">
+                                <div class="saved-settings-select">
+                                    <MudSelect T="int?"
+                                               Label="Saved Settings"
+                                               Value="_selectedSettingId"
+                                               ValueChanged="OnSavedSettingChanged"
+                                               Variant="Variant.Outlined"
+                                               Margin="Margin.Dense"
+                                               Clearable="true"
+                                               AdornmentIcon="@Icons.Material.Filled.Bookmark">
+                                        @foreach (var s in _savedSettings)
+                                        {
+                                            <MudSelectItem T="int?" Value="@((int?)s.SettingId)">
+                                                @s.SettingName @(s.IsPublic ? "🌐" : "🔒")
+                                            </MudSelectItem>
+                                        }
+                                    </MudSelect>
+                                </div>
+                                <MudTooltip Text="Save current settings">
+                                    <MudIconButton Icon="@Icons.Material.Filled.BookmarkAdd"
+                                                   Color="Color.Primary"
+                                                   Size="Size.Medium"
+                                                   OnClick="OnSave"
+                                                   Disabled="@(IsRunning || string.IsNullOrEmpty(_options.ReportType))" />
+                                </MudTooltip>
+                            </div>
                         </MudItem>
 
                         <!-- Report Type -->
@@ -224,19 +247,6 @@
                         </MudItem>
 
             </MudGrid>
-
-            <!-- ═══════════════════════════════════════════
-                 BUTTON ROW
-                 ═══════════════════════════════════════════ -->
-            <MudDivider Class="my-2" />
-            <ButtonRow Options="@_options"
-                       Config="@_config"
-                       IsRunning="@IsRunning"
-                       OnDisplay="@OnDisplay"
-                       OnExcel="@OnExcel"
-                       OnPdf="@OnPdf"
-                       OnSave="@OnSave"
-                       OnClear="@OnClear" />
 
     </MudExpansionPanel>
 </MudExpansionPanels>

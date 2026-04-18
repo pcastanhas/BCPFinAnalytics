@@ -456,3 +456,28 @@ html, body {
 .report-sidebar .mud-expand-panel {
     border-radius: 6px;
 }
+
+/* ═══════════════════════════════════════════════════
+   STICKY ACTION BAR + SAVED SETTINGS ROW
+   ═══════════════════════════════════════════════════ */
+
+.options-action-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: var(--mud-palette-background);
+    padding: 6px 0 6px 0;
+    border-bottom: 1px solid var(--mud-palette-divider);
+    margin-bottom: 8px;
+}
+
+.saved-settings-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.saved-settings-select {
+    flex: 1;
+    min-width: 0;
+}
