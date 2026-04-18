@@ -26,8 +26,9 @@ else if (!UserSession.IsValid)
 }
 else
 {
-    <div style="background:lime;padding:20px;font-size:24px;">SESSION OK — REPORT PAGE LOADING</div>
-    <ReportPage />
+    <div style="background:lime;padding:20px;font-size:24px;">SESSION OK</div>
+    <div style="background:yellow;padding:10px;">Testing OptionsPanel directly:</div>
+    <OptionsPanel OnRunReport="_ => Task.CompletedTask" IsRunning="false" />
 }
 
 @code {
