@@ -11,6 +11,7 @@
 @inject ISnackbar Snackbar
 @inject AlertService AlertSvc
 @inject ILogger<OptionsPanel> Logger
+@inject IJSRuntime JS
 @inject IOptions<BCPFinAnalytics.Services.AppSettings> AppSettings
 
 @*
@@ -287,73 +288,70 @@
 
     protected override async Task OnInitializedAsync()
     {
-        Logger.LogInformation("OptionsPanel initializing — loading lookup data for DbKey={DbKey}",
-            UserSession.DbKey);
+        await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] OnInitializedAsync start — DbKey={UserSession.DbKey}");
         try
         {
-            await LoadLookupsAsync();
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetFormatsAsync...");
+            var r1 = await LookupService.GetFormatsAsync(UserSession.DbKey);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetFormatsAsync done — IsSuccess={r1.IsSuccess} Error={r1.ErrorMessage}");
+            if (r1.IsSuccess) _formats = r1.Data!.ToList();
+            else { _loadError = $"Formats: {r1.ErrorMessage}"; return; }
+
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetBudgetsAsync...");
+            var r2 = await LookupService.GetBudgetsAsync(UserSession.DbKey);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetBudgetsAsync done — IsSuccess={r2.IsSuccess}");
+            if (r2.IsSuccess) _budgets = r2.Data!.ToList();
+
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetSFTypesAsync...");
+            var r3 = await LookupService.GetSFTypesAsync(UserSession.DbKey);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetSFTypesAsync done — IsSuccess={r3.IsSuccess}");
+            if (r3.IsSuccess) _sfTypes = r3.Data!.ToList();
+
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetBasisAsync...");
+            var r4 = await LookupService.GetBasisAsync(UserSession.DbKey);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetBasisAsync done — IsSuccess={r4.IsSuccess}");
+            if (r4.IsSuccess) _basisItems = r4.Data!.ToList();
+
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetEntitiesAsync...");
+            var r5 = await LookupService.GetEntitiesAsync(UserSession.DbKey);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetEntitiesAsync done — IsSuccess={r5.IsSuccess}");
+            if (r5.IsSuccess) _entities = r5.Data!.ToList();
+
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetProjectsAsync...");
+            var r6 = await LookupService.GetProjectsAsync(UserSession.DbKey);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetProjectsAsync done — IsSuccess={r6.IsSuccess}");
+            if (r6.IsSuccess) _projects = r6.Data!.ToList();
+
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetGLsAsync...");
+            var r7 = await LookupService.GetGLsAsync(UserSession.DbKey);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetGLsAsync done — IsSuccess={r7.IsSuccess} Error={r7.ErrorMessage}");
+            if (r7.IsSuccess) _gls = r7.Data!.ToList();
+            else { _loadError = $"GLs: {r7.ErrorMessage}"; return; }
+
+            await JS.InvokeVoidAsync("console.log", "[OptionsPanel] Calling GetAllForUserAsync...");
+            var r8 = await SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId);
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] GetAllForUserAsync done — IsSuccess={r8.IsSuccess}");
+            if (r8.IsSuccess) _savedSettings = r8.Data!.ToList();
+
+            _reportTypes = StrategyResolver.GetAllReportTypes().ToList();
+            if (string.IsNullOrEmpty(_options.LedgCode) && _gls.Count > 0)
+                _options.LedgCode = _gls[0].LedgCode;
+
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] All done — Formats={_formats.Count} GLs={_gls.Count} Entities={_entities.Count}");
         }
         catch (Exception ex)
         {
-            _loadError = $"Failed to load options: {ex.Message}";
-            Logger.LogError(ex, "OptionsPanel.OnInitializedAsync FAILED: {Message}", ex.Message);
+            _loadError = $"Failed to load options: {ex.Message} | {ex.InnerException?.Message}";
+            await JS.InvokeVoidAsync("console.error", $"[OptionsPanel] EXCEPTION: {ex.Message} | {ex.InnerException?.Message}");
+            Logger.LogError(ex, "OptionsPanel FAILED: {Message}", ex.Message);
         }
         finally
         {
-            _loading = false;  // always stop the spinner
+            _loading = false;
+            await JS.InvokeVoidAsync("console.log", $"[OptionsPanel] finally — _loading=false _loadError='{_loadError}'");
         }
     }
 
-    private async Task LoadLookupsAsync()
-    {
-      try
-      {
-        // Sequential awaits keep everything on the Blazor dispatcher —
-        // avoids threading issues from Task.WhenAll + ContinueWith mutations.
-        var r1 = await LookupService.GetFormatsAsync(UserSession.DbKey);
-        if (r1.IsSuccess) _formats = r1.Data!.ToList();
-        else AlertSvc.AddError($"Failed to load formats: {r1.ErrorMessage}");
-
-        var r2 = await LookupService.GetBudgetsAsync(UserSession.DbKey);
-        if (r2.IsSuccess) _budgets = r2.Data!.ToList();
-
-        var r3 = await LookupService.GetSFTypesAsync(UserSession.DbKey);
-        if (r3.IsSuccess) _sfTypes = r3.Data!.ToList();
-
-        var r4 = await LookupService.GetBasisAsync(UserSession.DbKey);
-        if (r4.IsSuccess) _basisItems = r4.Data!.ToList();
-
-        var r5 = await LookupService.GetEntitiesAsync(UserSession.DbKey);
-        if (r5.IsSuccess) _entities = r5.Data!.ToList();
-
-        var r6 = await LookupService.GetProjectsAsync(UserSession.DbKey);
-        if (r6.IsSuccess) _projects = r6.Data!.ToList();
-
-        var r7 = await LookupService.GetGLsAsync(UserSession.DbKey);
-        if (r7.IsSuccess) _gls = r7.Data!.ToList();
-        else AlertSvc.AddError($"Failed to load GLs: {r7.ErrorMessage}");
-
-        var r8 = await SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId);
-        if (r8.IsSuccess) _savedSettings = r8.Data!.ToList();
-
-        // Report types from registered strategies — not from the database
-        _reportTypes = StrategyResolver.GetAllReportTypes().ToList();
-
-        // Default LedgCode to first GL
-        if (string.IsNullOrEmpty(_options.LedgCode) && _gls.Count > 0)
-            _options.LedgCode = _gls[0].LedgCode;
-
-        Logger.LogInformation(
-            "OptionsPanel lookups loaded — ReportTypes={RT} Formats={F} Budgets={B} SFTypes={S} Basis={Ba} Entities={E} Projects={P} GLs={G} SavedSettings={SS} DefaultLedgCode={L}",
-            _reportTypes.Count, _formats.Count, _budgets.Count, _sfTypes.Count, _basisItems.Count,
-            _entities.Count, _projects.Count, _gls.Count, _savedSettings.Count, _options.LedgCode);
-      }
-      catch (Exception ex)
-      {
-          Logger.LogError(ex, "OptionsPanel.LoadLookupsAsync FAILED: {Message}", ex.Message);
-          AlertSvc.AddError($"Failed to load options: {ex.Message} — {ex.InnerException?.Message}");
-      }
-    }
 
     private void OnReportTypeChanged(string reportCode)
     {
