@@ -105,6 +105,7 @@ public class FormatLoader : IFormatLoader
                 FormatId   = header.Code,
                 FormatName = header.Name,
                 LedgCode   = header.LedgCode,
+                FinanTyp   = header.FinanTyp.Trim().ToUpper(),
                 Rows       = parsedRows.AsReadOnly()
             };
 
