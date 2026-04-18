@@ -25,13 +25,14 @@ public interface IIncomeStatementRepository
         string endPeriod);
 
     /// <summary>
-    /// Returns budget GL activity for the given period range.
-    /// Budget rows are identified by BASIS = @BudgetBasis.
+    /// Returns budget amounts for the given period range from the BUDGETS table.
+    /// Filtered by BUDTYPE = budgetType, summed across all BASIS and DEPARTMENT values.
+    /// BUDGETS table is separate from GLSUM — budget data is never in GLSUM.
     /// </summary>
     Task<IEnumerable<IncomeStatementRawRow>> GetBudgetAsync(
         string dbKey,
         GlQueryParameters glParams,
         string startPeriod,
         string endPeriod,
-        string budgetBasis);
+        string budgetType);
 }

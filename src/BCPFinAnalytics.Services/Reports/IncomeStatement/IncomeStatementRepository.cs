@@ -94,24 +94,26 @@ public class IncomeStatementRepository : IIncomeStatementRepository
         GlQueryParameters glParams,
         string startPeriod,
         string endPeriod,
-        string budgetBasis)
+        string budgetType)
     {
+        // Budget data comes from the BUDGETS table, not GLSUM.
+        // Sum across all BASIS and DEPARTMENT values for the given BUDTYPE.
+        // ACCTNUM in BUDGETS is the same format as GACC.ACCTNUM (FK enforced).
         const string sql = """
             SELECT
                 RTRIM(g.ACCTNUM)   AS AcctNum,
                 RTRIM(g.ACCTNAME)  AS AcctName,
                 RTRIM(g.TYPE)      AS Type,
-                RTRIM(s.ENTITYID)  AS EntityId,
-                SUM(s.ACTIVITY)    AS Amount
+                RTRIM(b.ENTITYID)  AS EntityId,
+                SUM(b.ACTIVITY)    AS Amount
             FROM GACC g
-            JOIN GLSUM s ON s.ACCTNUM = g.ACCTNUM
+            JOIN BUDGETS b ON b.ACCTNUM = g.ACCTNUM
             WHERE g.ACCTNUM  >= @LedgLo
               AND g.ACCTNUM  <  @LedgHi
-              AND s.ENTITYID IN @EntityIds
-              AND s.BASIS    =  @BudgetBasis
-              AND s.BALFOR   =  'N'
-              AND s.PERIOD   BETWEEN @StartPeriod AND @EndPeriod
-            GROUP BY g.ACCTNUM, g.ACCTNAME, g.TYPE, s.ENTITYID
+              AND b.ENTITYID IN @EntityIds
+              AND b.BUDTYPE  =  @BudgetType
+              AND b.PERIOD   BETWEEN @StartPeriod AND @EndPeriod
+            GROUP BY g.ACCTNUM, g.ACCTNAME, g.TYPE, b.ENTITYID
             ORDER BY g.ACCTNUM
             """;
 
@@ -120,7 +122,7 @@ public class IncomeStatementRepository : IIncomeStatementRepository
             LedgLo      = glParams.LedgLo,
             LedgHi      = glParams.LedgHi,
             EntityIds   = glParams.EntityIds,
-            BudgetBasis = budgetBasis,
+            BudgetType  = budgetType,
             StartPeriod = startPeriod,
             EndPeriod   = endPeriod
         };
@@ -129,8 +131,8 @@ public class IncomeStatementRepository : IIncomeStatementRepository
         {
             _logger.LogTrace(
                 "IncomeStatementRepository.GetBudgetAsync — DbKey={DbKey} " +
-                "Period={Start}-{End} Budget={Budget} Entities=[{Entities}]",
-                dbKey, startPeriod, endPeriod, budgetBasis,
+                "Period={Start}-{End} BudgetType={BudType} Entities=[{Entities}]",
+                dbKey, startPeriod, endPeriod, budgetType,
                 string.Join(",", glParams.EntityIds));
 
             await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
