@@ -66,7 +66,7 @@ public class GlDetailRepository : IGlDetailRepository
                 X.ITEM          AS Item,
                 X.JOBCODE       AS JobCode,
                 X.ENTRDATE      AS EntrDate,
-                X.DESCRPTN      AS Descrptn,
+                X.DESCRPN       AS Descrpn,
                 X.AMT           AS Amt
             FROM JOURNAL X
             JOIN @basis_tbl B ON B.basis = X.BASIS
@@ -89,7 +89,7 @@ public class GlDetailRepository : IGlDetailRepository
                 X.ITEM          AS Item,
                 X.JOBCODE       AS JobCode,
                 X.ENTRDATE      AS EntrDate,
-                X.DESCRPTN      AS Descrptn,
+                X.DESCRPN       AS Descrpn,
                 X.AMT           AS Amt
             FROM GHIS X
             JOIN @basis_tbl B ON B.basis = X.BASIS
