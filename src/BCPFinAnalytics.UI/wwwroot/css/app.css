@@ -1,3 +1,28 @@
+/* ═══════════════════════════════════════════════════
+   BASE LAYOUT — full viewport height
+   ═══════════════════════════════════════════════════ */
+
+html, body {
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Main content area below the fixed app bar (64px high) */
+.main-content-area {
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 8px 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+}
+
 /* ═══════════════════════════════════════════════════════
    BCPFinAnalytics — Application Styles
    ═══════════════════════════════════════════════════════ */
@@ -402,8 +427,9 @@ html, body {
     display: flex;
     gap: 12px;
     align-items: stretch;
-    flex: 1 1 0;                  /* grow to fill MudMainContent */
-    min-height: 0;                /* allow flex children to shrink */
+    flex: 1 1 0;
+    min-height: 0;
+    height: 100%;
     overflow: hidden;
 }
 
