@@ -230,13 +230,14 @@ public class TrialBalanceStrategy : IReportStrategy
 
                     case FormatRowType.Subtotal:
                     {
-                        // SU — accumulates already-signed amounts from RA/SM rows.
-                        // Do NOT re-apply sign — detail rows already have sign applied.
-                        subtotalAccumulators[fmtRow.SubtotId] = currentGroupTotal;
+                        // SU — currentGroupTotal holds raw GL sum.
+                        // Store raw for TO accumulation, apply sign for display only.
+                        var suDisplay = ApplySign(currentGroupTotal, fmtRow);
+                        subtotalAccumulators[fmtRow.SubtotId] = currentGroupTotal; // raw
 
-                        var suppress = fmtRow.Options.SuppressZeroSubtotal && currentGroupTotal == 0m;
+                        var suppress = fmtRow.Options.SuppressZeroSubtotal && suDisplay == 0m;
                         if (!suppress)
-                            reportRows.Add(BuildTotalRow(fmtRow.Label, currentGroupTotal, options.WholeDollars));
+                            reportRows.Add(BuildTotalRow(fmtRow.Label, suDisplay, options.WholeDollars));
 
                         currentGroupTotal = 0m;
                         break;
@@ -244,18 +245,18 @@ public class TrialBalanceStrategy : IReportStrategy
 
                     case FormatRowType.GrandTotal:
                     {
-                        // TO — sums already-signed subtotal amounts.
-                        // Do NOT re-apply sign — subtotals already have sign applied.
-                        var grandTotal = 0m;
+                        // TO — sums raw subtotal amounts then applies sign for display.
+                        var grandRaw = 0m;
                         foreach (var (lo, hi) in fmtRow.SubtotRefs)
                             for (var id = lo; id <= hi; id++)
                                 if (subtotalAccumulators.TryGetValue(id, out var v))
-                                    grandTotal += v;
+                                    grandRaw += v;
 
-                        var suppress = fmtRow.Options.SuppressIfZero && grandTotal == 0m;
+                        var grandDisplay = ApplySign(grandRaw, fmtRow);
+                        var suppress = fmtRow.Options.SuppressIfZero && grandDisplay == 0m;
                         if (!suppress)
                             reportRows.Add(BuildGrandTotalRow(
-                                fmtRow.Label, grandTotal, fmtRow.Options, options.WholeDollars));
+                                fmtRow.Label, grandDisplay, fmtRow.Options, options.WholeDollars));
                         break;
                     }
                 }
@@ -384,7 +385,7 @@ public class TrialBalanceStrategy : IReportStrategy
                 ? Math.Round(signed, 0, MidpointRounding.AwayFromZero)
                 : signed;
 
-            groupTotal += signed;
+            groupTotal += rawBalance;  // accumulate RAW for SU/TO math
 
             var formattedAcct = AccountNumberFormatter.Format(
                 acctNum, glInfo.AcctLgt, glInfo.AcctDsp);
@@ -438,7 +439,7 @@ public class TrialBalanceStrategy : IReportStrategy
             ? Math.Round(signed, 0, MidpointRounding.AwayFromZero)
             : signed;
 
-        groupTotal += signed;
+        groupTotal += rawBalance;  // accumulate RAW for SU/TO math
 
         // SM rows: all accounts summed — DrillDownRef carries all account numbers
         var acctNums = matchingAccounts.Select(a => a.Key).ToList();

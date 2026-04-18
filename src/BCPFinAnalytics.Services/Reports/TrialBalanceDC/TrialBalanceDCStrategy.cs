@@ -253,13 +253,14 @@ public class TrialBalanceDCStrategy : IReportStrategy
 
                     case FormatRowType.Subtotal:
                     {
+                        // Store raw in accumulators; apply sign for display only
                         var signedStarting = ApplySign(grpStarting, fmtRow);
                         var signedActivity = ApplySign(grpActivity, fmtRow);
                         var (deb, cred)    = SplitDebitCredit(signedActivity);
                         var ending         = signedStarting + signedActivity;
 
                         subtotalAccumulators[fmtRow.SubtotId] =
-                            (signedStarting, deb ?? 0m, cred ?? 0m, ending);
+                            (grpStarting, grpActivity, 0m, 0m); // store raw
 
                         var suppress = fmtRow.Options.SuppressZeroSubtotal
                                        && signedStarting == 0m && signedActivity == 0m;
@@ -274,28 +275,27 @@ public class TrialBalanceDCStrategy : IReportStrategy
 
                     case FormatRowType.GrandTotal:
                     {
-                        decimal gtStart = 0m, gtDeb = 0m, gtCred = 0m, gtEnd = 0m;
+                        // Sum raw subtotals then apply sign for display
+                        decimal gtRawStart = 0m, gtRawActivity = 0m;
                         foreach (var (lo, hi) in fmtRow.SubtotRefs)
                             for (var id = lo; id <= hi; id++)
                                 if (subtotalAccumulators.TryGetValue(id, out var st))
                                 {
-                                    gtStart += st.Starting;
-                                    gtDeb   += st.Debits;
-                                    gtCred  += st.Credits;
-                                    gtEnd   += st.Ending;
+                                    gtRawStart    += st.Starting;
+                                    gtRawActivity += st.Debits; // Debits holds raw activity
                                 }
 
-                        var signedStart = ApplySign(gtStart, fmtRow);
-                        var signedEnd   = ApplySign(gtEnd, fmtRow);
-                        var suppress    = fmtRow.Options.SuppressIfZero
-                                          && signedStart == 0m && gtDeb == 0m
-                                          && gtCred == 0m && signedEnd == 0m;
+                        var gtSignedStart    = ApplySign(gtRawStart, fmtRow);
+                        var gtSignedActivity = ApplySign(gtRawActivity, fmtRow);
+                        var (gtDeb, gtCred)  = SplitDebitCredit(gtSignedActivity);
+                        var gtEnd            = gtSignedStart + gtSignedActivity;
+
+                        var suppress = fmtRow.Options.SuppressIfZero
+                                       && gtSignedStart == 0m && gtRawActivity == 0m;
                         if (!suppress)
                             reportRows.Add(BuildGrandTotalRow(
-                                fmtRow.Label, signedStart,
-                                gtDeb == 0m ? null : (decimal?)gtDeb,
-                                gtCred == 0m ? null : (decimal?)gtCred,
-                                signedEnd, fmtRow.Options, options.WholeDollars));
+                                fmtRow.Label, gtSignedStart, gtDeb, gtCred,
+                                gtEnd, fmtRow.Options, options.WholeDollars));
                         break;
                     }
                 }
@@ -472,8 +472,8 @@ public class TrialBalanceDCStrategy : IReportStrategy
         var (deb, cred) = SplitDebitCredit(signedAct);
         var ending      = signedStart + signedAct;
 
-        groupStarting += signedStart;
-        groupActivity += signedAct;
+        groupStarting += rawStarting;  // accumulate RAW
+        groupActivity += rawActivity;  // accumulate RAW
 
         var acctNums  = matching.Select(a => a.Key).ToList();
         var drillDown = new DrillDownRef
