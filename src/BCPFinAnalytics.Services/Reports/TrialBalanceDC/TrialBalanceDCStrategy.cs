@@ -411,8 +411,8 @@ public class TrialBalanceDCStrategy : IReportStrategy
             var (deb, cred)    = SplitDebitCredit(signedActivity);
             var ending         = signedStarting + signedActivity;
 
-            groupStarting += signedStarting;
-            groupActivity += signedActivity;
+            groupStarting += data.StartingBalance;  // accumulate RAW
+            groupActivity += data.Activity;          // accumulate RAW
 
             var formattedAcct = AccountNumberFormatter.Format(
                 acctNum, glInfo.AcctLgt, glInfo.AcctDsp);
