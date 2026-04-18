@@ -37,12 +37,6 @@
 
             <MudGrid Spacing="2" Class="pa-2">
 
-                <!-- ═══════════════════════════════════════════
-                     RIGHT COLUMN — Report selection controls
-                     ═══════════════════════════════════════════ -->
-                <MudItem xs="12" md="6">
-                    <MudGrid Spacing="2">
-
                         <!-- Saved Settings -->
                         <MudItem xs="12">
                             <MudSelect T="int?"
@@ -183,15 +177,6 @@
                                          Color="Color.Primary" />
                         </MudItem>
 
-                    </MudGrid>
-                </MudItem>
-
-                <!-- ═══════════════════════════════════════════
-                     LEFT COLUMN — Entity selection + Basis
-                     ═══════════════════════════════════════════ -->
-                <MudItem xs="12" md="6">
-                    <MudGrid Spacing="2">
-
                         <!-- Selection Mode radio group -->
                         <MudItem xs="12">
                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
@@ -237,9 +222,6 @@
                                               SelectedBasisChanged="basis => _options.Basis = basis"
                                               Disabled="@(!_config.BasisEnabled)" />
                         </MudItem>
-
-                    </MudGrid>
-                </MudItem>
 
             </MudGrid>
 
