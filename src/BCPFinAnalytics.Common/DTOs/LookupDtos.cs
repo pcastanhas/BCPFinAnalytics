@@ -1,57 +1,79 @@
 namespace BCPFinAnalytics.Common.DTOs;
 
 /// <summary>MRI Entity lookup item.</summary>
-public record EntityDto(string EntityId, string Name);
+public class EntityDto
+{
+    public string EntityId { get; set; } = string.Empty;
+    public string Name     { get; set; } = string.Empty;
+}
 
 /// <summary>MRI Project lookup item.</summary>
-public record ProjectDto(string ProjId, string Name);
+public class ProjectDto
+{
+    public string ProjId { get; set; } = string.Empty;
+    public string Name   { get; set; } = string.Empty;
+}
 
 /// <summary>
 /// Format dropdown item.
 /// Sourced from: SELECT code, '('+RTRIM(code)+') '+RTRIM(name) FROM GUSR WHERE FINANTYP IN ('B','I')
-/// Also used as the Report Type dropdown source.
 /// </summary>
-public record FormatDto(string Code, string DisplayName);
+public class FormatDto
+{
+    public string Code        { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+}
 
 /// <summary>
 /// Budget dropdown item.
 /// Sourced from: SELECT budtype, '('+RTRIM(budtype)+') '+RTRIM(descrptn) FROM GBTY
 /// </summary>
-public record BudgetDto(string BudType, string DisplayName);
+public class BudgetDto
+{
+    public string BudType     { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+}
 
 /// <summary>
 /// Square Footage Type dropdown item.
 /// Sourced from: SELECT SQFTTYPE, '('+RTRIM(sqfttype)+') '+RTRIM(descrptn) FROM SQTY
 /// </summary>
-public record SFTypeDto(string SFType, string DisplayName);
+public class SFTypeDto
+{
+    public string SFType      { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+}
 
 /// <summary>
 /// Basis multi-select item.
 /// Sourced from: SELECT basis, DESCRPTN FROM BTYP WHERE basis &lt;&gt; 'B'
 /// </summary>
-public record BasisDto(string Basis, string DisplayName);
+public class BasisDto
+{
+    public string Basis       { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+}
 
 /// <summary>Saved setting summary for dropdown display.</summary>
-public record SavedSettingDto(
-    int SettingId,
-    string SettingName,
-    string UserId,
-    bool IsPublic);
+public class SavedSettingDto
+{
+    public int    SettingId   { get; set; }
+    public string SettingName { get; set; } = string.Empty;
+    public string UserId      { get; set; } = string.Empty;
+    public bool   IsPublic    { get; set; }
+}
 
 /// <summary>
-/// General Ledger dropdown item.
-/// Sourced from GLCD — carries all fields needed by AccountNumberFormatter.
-///
-/// AcctLgt: total digit length of the account number (GLCD.ACCTLGT).
-///          Used to left-pad raw ACCTNUM before applying the display mask.
-///
-/// AcctDsp: COBOL-style PICTURE mask (GLCD.ACCTDSP).
-///          Each char is '9' (digit placeholder) or '-'/'.' (literal separator).
-///          Used by AccountNumberFormatter.Format() to produce the display string.
+/// General Ledger dropdown item — carries all fields needed by AccountNumberFormatter.
+/// AcctLgt: total digit length (GLCD.ACCTLGT) — for left-padding raw ACCTNUM.
+/// AcctDsp: COBOL PICTURE mask (GLCD.ACCTDSP) — for display formatting.
+/// ReArnAcct: retained earnings account (GLCD.REARNACC) — for unposted RE.
 /// </summary>
-public record GLDto(
-    string LedgCode,
-    string DisplayName,
-    int    AcctLgt,
-    string AcctDsp,
-    string ReArnAcct);   // GLCD.REARNACC — retained earnings account for unposted RE
+public class GLDto
+{
+    public string LedgCode    { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public int    AcctLgt     { get; set; }
+    public string AcctDsp     { get; set; } = string.Empty;
+    public string ReArnAcct   { get; set; } = string.Empty;
+}
