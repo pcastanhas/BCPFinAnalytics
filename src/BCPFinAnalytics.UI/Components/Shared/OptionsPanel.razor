@@ -96,22 +96,6 @@
                             </MudSelect>
                         </MudItem>
 
-                        <!-- General Ledger (GLCD.LEDGCODE) — always active, defaults to first ledger -->
-                        <MudItem xs="12">
-                            <MudSelect T="string"
-                                       Label="General Ledger"
-                                       @bind-Value="_options.LedgCode"
-                                       Variant="Variant.Outlined"
-                                       Margin="Margin.Dense"
-                                       Required="true"
-                                       AdornmentIcon="@Icons.Material.Filled.AccountBalance">
-                                @foreach (var g in _gls)
-                                {
-                                    <MudSelectItem T="string" Value="@g.LedgCode">@g.DisplayName</MudSelectItem>
-                                }
-                            </MudSelect>
-                        </MudItem>
-
                         <!-- Start / End Period -->
                         <MudItem xs="6">
                             <PeriodInput Label="Start Period"
@@ -225,26 +209,28 @@
                             </MudSelect>
                         </MudItem>
 
-                        <!-- Whole Dollars -->
+                        <!-- Display Options — collapsible -->
                         <MudItem xs="12">
-                            <MudCheckBox @bind-Value="_options.WholeDollars"
-                                         Label="Display in whole dollars"
-                                         Color="Color.Primary"
-                                         Disabled="@(!_config.WholeDollarsEnabled)" />
-                        </MudItem>
-
-                        <!-- Suppress accounts with 0 value -->
-                        <MudItem xs="12">
-                            <MudCheckBox @bind-Value="_options.SuppressZeroAccounts"
-                                         Label="Suppress accounts with 0 value"
-                                         Color="Color.Primary" />
-                        </MudItem>
-
-                        <!-- Suppress subtotals with no activity -->
-                        <MudItem xs="12">
-                            <MudCheckBox @bind-Value="_options.SuppressInactiveSubtotals"
-                                         Label="Suppress subtotals with no activity"
-                                         Color="Color.Primary" />
+                            <MudExpansionPanels Elevation="0">
+                                <MudExpansionPanel Text="Display Options"
+                                                   Icon="@Icons.Material.Filled.Tune"
+                                                   @bind-Expanded="_displayOptionsExpanded"
+                                                   Dense="true">
+                                    <MudCheckBox @bind-Value="_options.WholeDollars"
+                                                 Label="Display in whole dollars"
+                                                 Color="Color.Primary"
+                                                 Disabled="@(!_config.WholeDollarsEnabled)"
+                                                 Dense="true" />
+                                    <MudCheckBox @bind-Value="_options.SuppressZeroAccounts"
+                                                 Label="Suppress accounts with 0 value"
+                                                 Color="Color.Primary"
+                                                 Dense="true" />
+                                    <MudCheckBox @bind-Value="_options.SuppressInactiveSubtotals"
+                                                 Label="Suppress subtotals with no activity"
+                                                 Color="Color.Primary"
+                                                 Dense="true" />
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
                         </MudItem>
 
             </MudGrid>
@@ -263,7 +249,6 @@
     private List<SFTypeDto> _sfTypes = new();
     private List<BasisDto> _basisItems = new();
     private List<EntityDto> _entities = new();
-    private List<GLDto> _gls = new();
     private List<SavedSettingDto> _savedSettings = new();
 
     // ── State ──────────────────────────────────────────────
@@ -272,6 +257,7 @@
     private int? _selectedSettingId = null;
     private bool _loading = true;
     private bool _panelExpanded = true;
+    private bool _displayOptionsExpanded = false;
 
     public enum OutputFormat { Screen, Excel, Pdf }
 
@@ -292,10 +278,9 @@
             var tSFTypes  = LookupService.GetSFTypesAsync(UserSession.DbKey);
             var tBasis    = LookupService.GetBasisAsync(UserSession.DbKey);
             var tEntities = LookupService.GetEntitiesAsync(UserSession.DbKey);
-            var tGLs      = LookupService.GetGLsAsync(UserSession.DbKey);
             var tSettings = SavedSettingsService.GetAllForUserAsync(UserSession.DbKey, UserSession.UserId);
 
-            await Task.WhenAll(tFormats, tBudgets, tSFTypes, tBasis, tEntities, tGLs, tSettings);
+            await Task.WhenAll(tFormats, tBudgets, tSFTypes, tBasis, tEntities, tSettings);
 
             // Assign results on dispatcher thread (we're back here after WhenAll)
             if (tFormats.Result.IsSuccess)  _formats      = tFormats.Result.Data!.ToList();
@@ -307,19 +292,11 @@
             if (tEntities.Result.IsSuccess) _entities     = tEntities.Result.Data!.ToList();
             if (tSettings.Result.IsSuccess) _savedSettings = tSettings.Result.Data!.ToList();
 
-            if (tGLs.Result.IsSuccess)
-            {
-                _gls = tGLs.Result.Data!.ToList();
-                if (string.IsNullOrEmpty(_options.LedgCode) && _gls.Count > 0)
-                    _options.LedgCode = _gls[0].LedgCode;
-            }
-            else _loadError = $"Failed to load GLs: {tGLs.Result.ErrorMessage}";
-
             Logger.LogInformation(
                 "OptionsPanel loaded — Formats={F} Budgets={B} SFTypes={S} " +
-                "Basis={Ba} Entities={E} GLs={G} SavedSettings={SS}",
+                "Basis={Ba} Entities={E} SavedSettings={SS}",
                 _formats.Count, _budgets.Count, _sfTypes.Count,
-                _basisItems.Count, _entities.Count, _gls.Count, _savedSettings.Count);
+                _basisItems.Count, _entities.Count, _savedSettings.Count);
         }
         catch (Exception ex)
         {

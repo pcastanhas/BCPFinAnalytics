@@ -166,7 +166,8 @@ public class LookupRepository : ILookupRepository
         const string sql = """
             SELECT
                 ENTITYID    AS EntityId,
-                NAME        AS Name
+                NAME        AS Name,
+                LEDGCODE    AS LedgCode
             FROM Entity
             ORDER BY ENTITYID
             """;

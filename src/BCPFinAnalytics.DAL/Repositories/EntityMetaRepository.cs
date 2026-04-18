@@ -103,6 +103,17 @@ public class EntityMetaRepository : IEntityMetaRepository
         SelectionMode selectionMode,
         IReadOnlyList<string> selectedIds)
     {
+    /// <inheritdoc />
+    public async Task<IEnumerable<string>> GetDistinctLedgCodesAsync(
+        string dbKey,
+        SelectionMode selectionMode,
+        IReadOnlyList<string> selectedIds)
+    {
+        var (sql, parameters) = BuildQuery("SELECT DISTINCT LEDGCODE", selectionMode, selectedIds);
+        await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
+        return await conn.QueryAsync<string>(sql, parameters);
+    }
+
         return selectionMode switch
         {
             SelectionMode.Include =>

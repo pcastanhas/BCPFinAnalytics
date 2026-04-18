@@ -101,13 +101,38 @@ public class ReportPreflightService : IReportPreflightService
                 return ServiceResult<bool>.Failure(msg, ErrorCode.ValidationError);
             }
 
-            // Invariant satisfied
+            // Year-end invariant satisfied — now validate LEDGCODE
             if (count == 1)
             {
+                var ledgCodes = (await _entityMetaRepo.GetDistinctLedgCodesAsync(
+                    options.DbKey,
+                    options.SelectionMode,
+                    options.SelectedIds.AsReadOnly())).ToList();
+
+                if (ledgCodes.Count > 1)
+                {
+                    var msg = $"The selected entities span {ledgCodes.Count} different " +
+                              $"ledger codes ({string.Join(", ", ledgCodes)}). " +
+                              $"All entities in a single report must share the same ledger code.";
+                    _logger.LogWarning("Preflight failed — mixed LEDGCODE: {Codes}",
+                        string.Join(", ", ledgCodes));
+                    return ServiceResult<bool>.Failure(msg, ErrorCode.ValidationError);
+                }
+
+                if (ledgCodes.Count == 0)
+                {
+                    const string msg = "Could not determine the ledger code for the selected entities.";
+                    _logger.LogWarning("Preflight failed — no LEDGCODE found");
+                    return ServiceResult<bool>.Failure(msg, ErrorCode.ValidationError);
+                }
+
+                // Derive LedgCode from entities — user no longer specifies it
+                options.LedgCode = ledgCodes[0].Trim();
+
                 _logger.LogInformation(
-                    "Preflight passed — all entities share the same fiscal year-end. " +
+                    "Preflight passed — YearEnd consistent, LedgCode={LedgCode}. " +
                     "ReportType={ReportType} DbKey={DbKey}",
-                    options.ReportType, options.DbKey);
+                    options.LedgCode, options.ReportType, options.DbKey);
                 return ServiceResult<bool>.Success(true);
             }
 

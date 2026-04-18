@@ -5,6 +5,7 @@ public class EntityDto
 {
     public string EntityId { get; set; } = string.Empty;
     public string Name     { get; set; } = string.Empty;
+    public string LedgCode { get; set; } = string.Empty;
 }
 
 /// <summary>MRI Project lookup item.</summary>

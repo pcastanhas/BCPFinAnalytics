@@ -32,4 +32,14 @@ public interface IEntityMetaRepository
         string dbKey,
         BCPFinAnalytics.Common.Enums.SelectionMode selectionMode,
         IReadOnlyList<string> selectedIds);
+
+    /// <summary>
+    /// Returns the distinct LEDGCODE values across the effective entity selection.
+    /// Used by preflight to validate all entities share the same ledger code,
+    /// and to derive the LedgCode for the report without user input.
+    /// </summary>
+    Task<IEnumerable<string>> GetDistinctLedgCodesAsync(
+        string dbKey,
+        BCPFinAnalytics.Common.Enums.SelectionMode selectionMode,
+        IReadOnlyList<string> selectedIds);
 }
