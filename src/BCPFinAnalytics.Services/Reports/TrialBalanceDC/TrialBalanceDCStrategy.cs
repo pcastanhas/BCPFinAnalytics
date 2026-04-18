@@ -423,10 +423,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
             {
                 AcctNums     = new[] { acctNum },
                 EntityIds    = glParams.EntityIds,
-                PeriodFrom   = FiscalCalendar.ToMriPeriod(
-                                   glParams.EndPeriod == glParams.BegYrPd
-                                       ? glParams.BegYrPd
-                                       : glParams.BegYrPd),
+                PeriodFrom   = glParams.BegYrPd,  // already YYYYMM from GlFilterBuilder
                 PeriodTo     = glParams.EndPeriod,
                 BasisList    = glParams.BasisList,
                 DisplayLabel = $"{formattedAcct} · {data.AcctName}"
