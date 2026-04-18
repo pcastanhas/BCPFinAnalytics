@@ -230,13 +230,13 @@ public class TrialBalanceStrategy : IReportStrategy
 
                     case FormatRowType.Subtotal:
                     {
-                        // SU — accumulate running total, emit Total row
-                        var suAmount = ApplySign(currentGroupTotal, fmtRow);
-                        subtotalAccumulators[fmtRow.SubtotId] = suAmount;
+                        // SU — accumulates already-signed amounts from RA/SM rows.
+                        // Do NOT re-apply sign — detail rows already have sign applied.
+                        subtotalAccumulators[fmtRow.SubtotId] = currentGroupTotal;
 
-                        var suppress = fmtRow.Options.SuppressZeroSubtotal && suAmount == 0m;
+                        var suppress = fmtRow.Options.SuppressZeroSubtotal && currentGroupTotal == 0m;
                         if (!suppress)
-                            reportRows.Add(BuildTotalRow(fmtRow.Label, suAmount, options.WholeDollars));
+                            reportRows.Add(BuildTotalRow(fmtRow.Label, currentGroupTotal, options.WholeDollars));
 
                         currentGroupTotal = 0m;
                         break;
@@ -244,18 +244,18 @@ public class TrialBalanceStrategy : IReportStrategy
 
                     case FormatRowType.GrandTotal:
                     {
-                        // TO — sum specified subtotal IDs
+                        // TO — sums already-signed subtotal amounts.
+                        // Do NOT re-apply sign — subtotals already have sign applied.
                         var grandTotal = 0m;
                         foreach (var (lo, hi) in fmtRow.SubtotRefs)
                             for (var id = lo; id <= hi; id++)
                                 if (subtotalAccumulators.TryGetValue(id, out var v))
                                     grandTotal += v;
 
-                        var gtAmount = ApplySign(grandTotal, fmtRow);
-                        var suppress = fmtRow.Options.SuppressIfZero && gtAmount == 0m;
+                        var suppress = fmtRow.Options.SuppressIfZero && grandTotal == 0m;
                         if (!suppress)
                             reportRows.Add(BuildGrandTotalRow(
-                                fmtRow.Label, gtAmount, fmtRow.Options, options.WholeDollars));
+                                fmtRow.Label, grandTotal, fmtRow.Options, options.WholeDollars));
                         break;
                     }
                 }
