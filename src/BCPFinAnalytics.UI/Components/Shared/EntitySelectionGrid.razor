@@ -100,6 +100,8 @@
         .Where(i => string.IsNullOrEmpty(_searchText)
             || i.Id.Contains(_searchText, StringComparison.OrdinalIgnoreCase)
             || i.Name.Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+        .OrderBy(i => SelectedIds.Contains(i.Id) ? 0 : 1)  // selected first
+        .ThenBy(i => i.Id)
         .ToList();
 
     private async Task ToggleItem(string id)

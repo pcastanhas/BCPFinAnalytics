@@ -20,7 +20,7 @@
         }
         else
         {
-            @foreach (var item in BasisItems)
+            @foreach (var item in BasisItems.OrderBy(b => SelectedBasis.Contains(b.Basis) ? 0 : 1).ThenBy(b => b.Basis))
             {
                 var isSelected = SelectedBasis.Contains(item.Basis);
                 <div class="basis-row @(isSelected ? "selected" : "") @(Disabled ? "" : "clickable")"
