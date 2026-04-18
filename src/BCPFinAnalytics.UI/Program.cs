@@ -37,6 +37,22 @@ try
     builder.Services.AddRazorComponents()
         .AddInteractiveServerComponents();
 
+    // Increase circuit and SignalR timeouts — DB calls on first load can be slow
+    builder.Services.AddServerSideBlazor(options =>
+    {
+        options.DisconnectedCircuitRetentionPeriod = TimeSpan.FromMinutes(5);
+        options.JSInteropDefaultCallTimeout        = TimeSpan.FromMinutes(2);
+        options.MaxBufferedUnacknowledgedRenderBatches = 20;
+    });
+
+    builder.Services.AddSignalR(options =>
+    {
+        options.ClientTimeoutInterval        = TimeSpan.FromMinutes(5);
+        options.HandshakeTimeout             = TimeSpan.FromSeconds(30);
+        options.KeepAliveInterval            = TimeSpan.FromSeconds(15);
+        options.MaximumReceiveMessageSize    = 32 * 1024;
+    });
+
     // ──────────────────────────────────────────────
     //  MudBlazor
     // ──────────────────────────────────────────────
