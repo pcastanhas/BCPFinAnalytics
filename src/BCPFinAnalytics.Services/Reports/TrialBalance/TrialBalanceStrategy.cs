@@ -261,12 +261,7 @@ public class TrialBalanceStrategy : IReportStrategy
                 }
             }
 
-            // ── Step 9: Unposted Retained Earnings ─────────────────────────
-            // Only append for Balance Sheet formats (FINANTYP='B').
-            // Trial Balance and P&L formats (FINANTYP='I') show income accounts
-            // at their natural balances — no synthetic RE row needed.
-            if (format.FinanTyp == "B")
-            {
+            // ── Step 9: Unposted Retained Earnings ────────────────────────
             var reResult = await _unpostedReService.BuildRowAsync(
                 options.DbKey, glParams,
                 glInfo.ReArnAcct,
@@ -275,8 +270,7 @@ public class TrialBalanceStrategy : IReportStrategy
             // Note: GLCD.REARNACC needs to be added to GLDto in a follow-up.
             // For now the UnpostedRE row is appended if the service returns data.
             if (reResult.IsSuccess && reResult.Data != null)
-                    reportRows.Add(reResult.Data);
-            }
+                reportRows.Add(reResult.Data);
 
             // ── Step 10: Apply suppression ────────────────────────────────
             ReportPostProcessor.ApplySuppression(reportRows, options);

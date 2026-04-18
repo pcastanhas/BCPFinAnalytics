@@ -302,21 +302,17 @@ public class TrialBalanceDCStrategy : IReportStrategy
             }
 
             // ── Step 10: Unposted Retained Earnings ───────────────────────
-            // Only for Balance Sheet formats (FINANTYP='B') — not for TB/P&L formats
-            if (format.FinanTyp == "B")
-            {
-                var reResult = await _unpostedReService.BuildRowAsync(
-                    options.DbKey, glParams, glInfo.ReArnAcct,
-                    ColEnding, options.WholeDollars);
+            var reResult = await _unpostedReService.BuildRowAsync(
+                options.DbKey, glParams, glInfo.ReArnAcct,
+                ColEnding, options.WholeDollars);
 
-                if (reResult.IsSuccess && reResult.Data != null)
-                {
-                    var reRow = reResult.Data;
-                    reRow.Cells[ColStarting] = CellValue.Empty;
-                    reRow.Cells[ColDebits]   = CellValue.Empty;
-                    reRow.Cells[ColCredits]  = CellValue.Empty;
-                    reportRows.Add(reRow);
-                }
+            if (reResult.IsSuccess && reResult.Data != null)
+            {
+                var reRow = reResult.Data;
+                reRow.Cells[ColStarting] = CellValue.Empty;
+                reRow.Cells[ColDebits]   = CellValue.Empty;
+                reRow.Cells[ColCredits]  = CellValue.Empty;
+                reportRows.Add(reRow);
             }
 
             // ── Step 11: Suppression ───────────────────────────────────────
