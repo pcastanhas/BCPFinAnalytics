@@ -15,6 +15,7 @@ namespace BCPFinAnalytics.Services.Reports.IncomeStatement;
 
 /// <summary>
 /// Simple Income Statement — Actual vs Budget with PTD and YTD columns.
+/// Uses ResolvedAccountRange from BCPFinAnalytics.Common.Models.Format.
 ///
 /// COLUMNS (8 total):
 ///   PTD Actual    — activity in selected period range
@@ -174,10 +175,10 @@ public class IncomeStatementStrategy : IReportStrategy
             var combined = new Dictionary<string, AcctAggregate>();
             foreach (var acct in allAccts)
             {
-                var meta = (SimpleAcct?)(ptdActual.GetValueOrDefault(acct)
-                         ?? ptdBudget.GetValueOrDefault(acct)
-                         ?? ytdActual.GetValueOrDefault(acct)
-                         ?? ytdBudget.GetValueOrDefault(acct));
+                var meta = ptdActual.GetValueOrDefault(acct)
+                        ?? ptdBudget.GetValueOrDefault(acct)
+                        ?? ytdActual.GetValueOrDefault(acct)
+                        ?? ytdBudget.GetValueOrDefault(acct);
 
                 combined[acct] = new AcctAggregate(
                     meta!.AcctName, meta.Type,
@@ -275,7 +276,7 @@ public class IncomeStatementStrategy : IReportStrategy
                             reportRows.Add(BuildGrandTotalRow(
                                 fmtRow.Label, gPtdA, gPtdB, gPtdV, gPtdP,
                                 gYtdA, gYtdB, gYtdV, gYtdP,
-                                fmtRow.Options, options.WholeDollars));
+                                options.WholeDollars));
                         break;
                     }
                 }
@@ -292,14 +293,14 @@ public class IncomeStatementStrategy : IReportStrategy
 
             var columns = new List<ReportColumn>
             {
-                new() { ColumnId = ColPtdActual, Header = $"PTD Actual\n{ptdLabel}",  Width = 120, IsNumeric = true },
-                new() { ColumnId = ColPtdBudget, Header = $"PTD Budget\n{ptdLabel}",  Width = 120, IsNumeric = true },
-                new() { ColumnId = ColPtdVar,    Header = "PTD Variance",              Width = 120, IsNumeric = true },
-                new() { ColumnId = ColPtdVarPct, Header = "PTD Var %",                Width = 80,  IsNumeric = true },
-                new() { ColumnId = ColYtdActual, Header = $"YTD Actual\n{ytdLabel}",  Width = 120, IsNumeric = true },
-                new() { ColumnId = ColYtdBudget, Header = $"YTD Budget\n{ytdLabel}",  Width = 120, IsNumeric = true },
-                new() { ColumnId = ColYtdVar,    Header = "YTD Variance",              Width = 120, IsNumeric = true },
-                new() { ColumnId = ColYtdVarPct, Header = "YTD Var %",                Width = 80,  IsNumeric = true },
+                new() { ColumnId = ColPtdActual, Header = $"PTD Actual\n{ptdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColPtdBudget, Header = $"PTD Budget\n{ptdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColPtdVar,    Header = "PTD Variance",              Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColPtdVarPct, Header = "PTD Var %",                Width = 80,  DataType = ColumnDataType.Percent   },
+                new() { ColumnId = ColYtdActual, Header = $"YTD Actual\n{ytdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColYtdBudget, Header = $"YTD Budget\n{ytdLabel}",  Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColYtdVar,    Header = "YTD Variance",              Width = 120, DataType = ColumnDataType.Currency },
+                new() { ColumnId = ColYtdVarPct, Header = "YTD Var %",                Width = 80,  DataType = ColumnDataType.Percent   },
             };
 
             // ── Step 12: Build metadata ────────────────────────────────────
@@ -369,7 +370,7 @@ public class IncomeStatementStrategy : IReportStrategy
         string label,
         decimal ptdA, decimal ptdB, decimal ptdV, decimal? ptdP,
         decimal ytdA, decimal ytdB, decimal ytdV, decimal? ytdP,
-        FormatOptions opts, bool wholeDollars) => new()
+        bool wholeDollars) => new()
     {
         RowType = RowType.GrandTotal, AccountCode = string.Empty, AccountName = label,
         Cells   = BuildCells(ptdA, ptdB, ptdV, ptdP, ytdA, ytdB, ytdV, ytdP, wholeDollars)
@@ -554,14 +555,24 @@ public class IncomeStatementStrategy : IReportStrategy
 
 
     private static IEnumerable<KeyValuePair<string, AcctAggregate>> GetMatchingAccounts(
-        IReadOnlyList<AccountRange> ranges,
+        IReadOnlyList<ResolvedAccountRange> ranges,
         Dictionary<string, AcctAggregate> combined)
     {
-        return combined
-            .Where(kvp => ranges.Any(r =>
-                string.Compare(kvp.Key, r.BegAcct, StringComparison.OrdinalIgnoreCase) >= 0 &&
-                string.Compare(kvp.Key, r.EndAcct, StringComparison.OrdinalIgnoreCase) <= 0))
-            .OrderBy(kvp => kvp.Key);
+        return combined.Where(kvp =>
+        {
+            var acct = kvp.Key;
+            bool included = false;
+            foreach (var range in ranges)
+            {
+                bool inRange =
+                    string.Compare(acct, range.BegAcct, StringComparison.OrdinalIgnoreCase) >= 0 &&
+                    string.Compare(acct, range.EndAcct, StringComparison.OrdinalIgnoreCase) <= 0;
+
+                if (range.IsExclusion && inRange) return false;
+                if (!range.IsExclusion && inRange) included = true;
+            }
+            return included;
+        }).OrderBy(kvp => kvp.Key);
     }
 
     private static ServiceResult<bool> ValidateOptions(ReportOptions options)
