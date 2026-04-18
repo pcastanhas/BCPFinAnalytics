@@ -280,9 +280,22 @@
             hCell.Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Medium;
         }
 
-        // Starting/ending balance rows + data rows
+        // Starting balance row
         int row = 5;
-        if (DrillDown.StartingBalance.HasValue) { var c=ws.Cell(row,11); c.Value="Starting Balance"; c.Style.Font.Bold=true; c.Style.Fill.BackgroundColor=ClosedXML.Excel.XLColor.FromHtml("#DEEAF1"); var d=ws.Cell(row,12); d.Value=(double)DrillDown.StartingBalance.Value; d.Style.Font.Bold=true; d.Style.NumberFormat.Format=@"#,##0.00_);(#,##0.00);\"-\""; d.Style.Alignment.Horizontal=ClosedXML.Excel.XLAlignmentHorizontalValues.Right; d.Style.Fill.BackgroundColor=ClosedXML.Excel.XLColor.FromHtml("#DEEAF1"); row++; }
+        if (DrillDown.StartingBalance.HasValue)
+        {
+            ws.Cell(row, 11).Value = "Starting Balance";
+            ws.Cell(row, 11).Style.Font.Bold = true;
+            ws.Cell(row, 11).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#DEEAF1");
+            var sb = ws.Cell(row, 12);
+            sb.Value = (double)DrillDown.StartingBalance.Value;
+            sb.Style.Font.Bold = true;
+            sb.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+            sb.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+            sb.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#DEEAF1");
+            row++;
+        }
+
         foreach (var r in _rows)
         {
             ws.Cell(row, 1).Value  = FormatPeriod(r.Period);
@@ -304,8 +317,8 @@
             row++;
         }
 
-        // Total row
-        ws.Cell(row, 11).Value = "Total";
+        // Net Activity row
+        ws.Cell(row, 11).Value = "Net Activity";
         ws.Cell(row, 11).Style.Font.Bold = true;
         var totalCell = ws.Cell(row, 12);
         totalCell.Value = (double)_rows.Sum(r => r.Amt);
@@ -313,6 +326,22 @@
         totalCell.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
         totalCell.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
         totalCell.Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+        row++;
+
+        // Ending balance row
+        if (DrillDown.EndingBalance.HasValue)
+        {
+            ws.Cell(row, 11).Value = "Ending Balance";
+            ws.Cell(row, 11).Style.Font.Bold = true;
+            ws.Cell(row, 11).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#BDD7EE");
+            var eb = ws.Cell(row, 12);
+            eb.Value = (double)DrillDown.EndingBalance.Value;
+            eb.Style.Font.Bold = true;
+            eb.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+            eb.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+            eb.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#BDD7EE");
+            eb.Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Medium;
+        }
 
         // Column widths
         ws.Column(11).Width = 40;
