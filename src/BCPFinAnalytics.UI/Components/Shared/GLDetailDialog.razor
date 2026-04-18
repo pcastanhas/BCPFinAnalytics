@@ -178,7 +178,7 @@
 
     // Adjust colspan based on whether multi-entity/account columns are shown
     private int TotalColspan =>
-        8
+        10   // Period, Ref, Source, Basis, Dept, Item, Job, Date, Description, Amount
         + (DrillDown.EntityIds.Count > 1 ? 1 : 0)
         + (DrillDown.AcctNums.Count > 1 ? 1 : 0);
 
