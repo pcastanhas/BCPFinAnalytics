@@ -149,7 +149,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
     [Parameter] public BudgetDrillDownRef DrillDown { get; set; } = null!;
 
     private List<BudgetDetailRow> _rows = new();
