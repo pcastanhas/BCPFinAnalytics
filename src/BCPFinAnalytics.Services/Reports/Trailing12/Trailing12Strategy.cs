@@ -174,11 +174,11 @@ public class Trailing12Strategy : IReportStrategy
                 switch (fmtRow.RowType)
                 {
                     case FormatRowType.Blank:
-                        reportRows.Add(BuildBlankRow());
+                        reportRows.Add(ReportFormatHelpers.BuildBlankRow());
                         break;
 
                     case FormatRowType.Title:
-                        reportRows.Add(BuildTitleRow(fmtRow.Label));
+                        reportRows.Add(ReportFormatHelpers.BuildTitleRow(fmtRow.Label));
                         break;
 
                     case FormatRowType.Range:
@@ -335,20 +335,6 @@ public class Trailing12Strategy : IReportStrategy
     //  Row builders
     // ══════════════════════════════════════════════════════════════
 
-    private static ReportRow BuildBlankRow() => new()
-    {
-        RowType     = RowType.SectionHeader,
-        AccountCode = string.Empty,
-        AccountName = string.Empty
-    };
-
-    private static ReportRow BuildTitleRow(string label) => new()
-    {
-        RowType     = RowType.SectionHeader,
-        AccountCode = string.Empty,
-        AccountName = label
-    };
-
     private ReportRow BuildTotalRow(
         string label,
         Dictionary<string, decimal> monthly,
@@ -372,14 +358,15 @@ public class Trailing12Strategy : IReportStrategy
         Dictionary<string, decimal> grpMonthly)
     {
         var rows     = new List<ReportRow>();
-        var matching = GetMatchingAccounts(fmtRow.Ranges, combined);
+        var matching = ReportFormatHelpers.MatchAccounts(fmtRow.Ranges, combined.Keys);
 
-        foreach (var (acctNum, data) in matching)
+        foreach (var acctNum in matching)
         {
+            var data = combined[acctNum];
             // Apply sign per period
             var signedMonthly = periods.ToDictionary(
                 p => p,
-                p => ApplySign(data.Monthly[p], fmtRow));
+                p => ReportFormatHelpers.ApplySign(data.Monthly[p], fmtRow));
 
             // Accumulate signed values into group total
             foreach (var p in periods)
@@ -411,12 +398,14 @@ public class Trailing12Strategy : IReportStrategy
         IReadOnlyList<string> periods,
         Dictionary<string, decimal> grpMonthly)
     {
-        var matching = GetMatchingAccounts(fmtRow.Ranges, combined);
-        if (!matching.Any()) return null;
+        var matching = ReportFormatHelpers
+            .MatchAccounts(fmtRow.Ranges, combined.Keys)
+            .ToList();
+        if (matching.Count == 0) return null;
 
         var signedMonthly = periods.ToDictionary(
             p => p,
-            p => ApplySign(matching.Sum(a => a.Value.Monthly[p]), fmtRow));
+            p => ReportFormatHelpers.ApplySign(matching.Sum(a => combined[a].Monthly[p]), fmtRow));
 
         foreach (var p in periods)
             grpMonthly[p] += signedMonthly[p];
@@ -485,36 +474,6 @@ public class Trailing12Strategy : IReportStrategy
     // ══════════════════════════════════════════════════════════════
     //  Helpers
     // ══════════════════════════════════════════════════════════════
-
-    private static decimal ApplySign(decimal amount, FormatRow fmtRow)
-    {
-        var result = amount;
-        if (fmtRow.DebCred == "C")          result = -result;
-        if (fmtRow.Options.ReverseAmount)   result = -result;
-        // ReverseVariance (^) has no effect — no variance column on T12
-        return result;
-    }
-
-    private static IEnumerable<KeyValuePair<string, AcctAggregate>> GetMatchingAccounts(
-        IReadOnlyList<ResolvedAccountRange> ranges,
-        Dictionary<string, AcctAggregate> combined)
-    {
-        return combined.Where(kvp =>
-        {
-            var acct     = kvp.Key;
-            bool included = false;
-            foreach (var range in ranges)
-            {
-                bool inRange =
-                    string.Compare(acct, range.BegAcct, StringComparison.OrdinalIgnoreCase) >= 0 &&
-                    string.Compare(acct, range.EndAcct, StringComparison.OrdinalIgnoreCase) <= 0;
-
-                if (range.IsExclusion && inRange) return false;
-                if (!range.IsExclusion && inRange) included = true;
-            }
-            return included;
-        }).OrderBy(kvp => kvp.Key);
-    }
 
     private static ServiceResult<bool> ValidateOptions(ReportOptions options)
     {

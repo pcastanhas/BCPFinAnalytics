@@ -230,11 +230,11 @@ public class IncomeStatementStrategy : IReportStrategy
                 switch (fmtRow.RowType)
                 {
                     case FormatRowType.Blank:
-                        reportRows.Add(BuildBlankRow());
+                        reportRows.Add(ReportFormatHelpers.BuildBlankRow());
                         break;
 
                     case FormatRowType.Title:
-                        reportRows.Add(BuildTitleRow(fmtRow.Label));
+                        reportRows.Add(ReportFormatHelpers.BuildTitleRow(fmtRow.Label));
                         break;
 
                     case FormatRowType.Range:
@@ -376,16 +376,6 @@ public class IncomeStatementStrategy : IReportStrategy
     //  Row builders
     // ══════════════════════════════════════════════════════════════
 
-    private static ReportRow BuildBlankRow() => new()
-    {
-        RowType = RowType.SectionHeader, AccountCode = string.Empty, AccountName = string.Empty
-    };
-
-    private static ReportRow BuildTitleRow(string label) => new()
-    {
-        RowType = RowType.SectionHeader, AccountCode = string.Empty, AccountName = label
-    };
-
     private ReportRow BuildTotalRow(
         string label,
         decimal ptdA, decimal ptdB, decimal ptdV, decimal? ptdP,
@@ -456,16 +446,17 @@ public class IncomeStatementStrategy : IReportStrategy
         ref decimal grpYtdA, ref decimal grpYtdB)
     {
         var rows     = new List<ReportRow>();
-        var matching = GetMatchingAccounts(fmtRow.Ranges, combined);
+        var matching = ReportFormatHelpers.MatchAccounts(fmtRow.Ranges, combined.Keys);
 
-        foreach (var (acctNum, data) in matching)
+        foreach (var acctNum in matching)
         {
-            var sPtdA = ApplySign(data.PtdActual, fmtRow);
-            var sPtdB = ApplySign(data.PtdBudget, fmtRow);
+            var data  = combined[acctNum];
+            var sPtdA = ReportFormatHelpers.ApplySign(data.PtdActual, fmtRow);
+            var sPtdB = ReportFormatHelpers.ApplySign(data.PtdBudget, fmtRow);
             var sPtdV = CalcVariance(sPtdA, sPtdB, fmtRow);
             var sPtdP = CalcVarPct(sPtdV, sPtdB);
-            var sYtdA = ApplySign(data.YtdActual, fmtRow);
-            var sYtdB = ApplySign(data.YtdBudget, fmtRow);
+            var sYtdA = ReportFormatHelpers.ApplySign(data.YtdActual, fmtRow);
+            var sYtdB = ReportFormatHelpers.ApplySign(data.YtdBudget, fmtRow);
             var sYtdV = CalcVariance(sYtdA, sYtdB, fmtRow);
             var sYtdP = CalcVarPct(sYtdV, sYtdB);
 
@@ -551,18 +542,20 @@ public class IncomeStatementStrategy : IReportStrategy
         ref decimal grpPtdA, ref decimal grpPtdB,
         ref decimal grpYtdA, ref decimal grpYtdB)
     {
-        var matching = GetMatchingAccounts(fmtRow.Ranges, combined);
-        if (!matching.Any()) return null;
+        var matching = ReportFormatHelpers
+            .MatchAccounts(fmtRow.Ranges, combined.Keys)
+            .ToList();
+        if (matching.Count == 0) return null;
 
-        var rawPtdA = matching.Sum(a => a.Value.PtdActual);
-        var rawPtdB = matching.Sum(a => a.Value.PtdBudget);
-        var rawYtdA = matching.Sum(a => a.Value.YtdActual);
-        var rawYtdB = matching.Sum(a => a.Value.YtdBudget);
+        var rawPtdA = matching.Sum(a => combined[a].PtdActual);
+        var rawPtdB = matching.Sum(a => combined[a].PtdBudget);
+        var rawYtdA = matching.Sum(a => combined[a].YtdActual);
+        var rawYtdB = matching.Sum(a => combined[a].YtdBudget);
 
-        var sPtdA = ApplySign(rawPtdA, fmtRow);
-        var sPtdB = ApplySign(rawPtdB, fmtRow);
-        var sYtdA = ApplySign(rawYtdA, fmtRow);
-        var sYtdB = ApplySign(rawYtdB, fmtRow);
+        var sPtdA = ReportFormatHelpers.ApplySign(rawPtdA, fmtRow);
+        var sPtdB = ReportFormatHelpers.ApplySign(rawPtdB, fmtRow);
+        var sYtdA = ReportFormatHelpers.ApplySign(rawYtdA, fmtRow);
+        var sYtdB = ReportFormatHelpers.ApplySign(rawYtdB, fmtRow);
 
         grpPtdA += sPtdA;
         grpPtdB += sPtdB;
@@ -590,19 +583,6 @@ public class IncomeStatementStrategy : IReportStrategy
     // ══════════════════════════════════════════════════════════════
 
     /// <summary>
-    /// Applies display sign to an actual or budget amount.
-    /// Only DEBCRED and O=R (ReverseAmount) affect the displayed amount.
-    /// O=^ (ReverseVariance) affects variance direction only — not the amount display.
-    /// </summary>
-    private static decimal ApplySign(decimal amount, FormatRow fmtRow)
-    {
-        var result = amount;
-        if (fmtRow.DebCred == "C")              result = -result;  // C=Credit → negate
-        if (fmtRow.Options.ReverseAmount)       result = -result;  // O=R → reverse amount
-        return result;
-    }
-
-    /// <summary>
     /// Calculates variance with direction determined by O=^ (ReverseVariance).
     /// Normal:  Actual - Budget  (positive = spent more / earned more than budget)
     /// Reversed: Budget - Actual (positive = favorable for expenses: under budget)
@@ -622,27 +602,6 @@ public class IncomeStatementStrategy : IReportStrategy
     {
         if (budget == 0m) return null;
         return variance / Math.Abs(budget) * 100m;
-    }
-
-    private static IEnumerable<KeyValuePair<string, AcctAggregate>> GetMatchingAccounts(
-        IReadOnlyList<ResolvedAccountRange> ranges,
-        Dictionary<string, AcctAggregate> combined)
-    {
-        return combined.Where(kvp =>
-        {
-            var acct = kvp.Key;
-            bool included = false;
-            foreach (var range in ranges)
-            {
-                bool inRange =
-                    string.Compare(acct, range.BegAcct, StringComparison.OrdinalIgnoreCase) >= 0 &&
-                    string.Compare(acct, range.EndAcct, StringComparison.OrdinalIgnoreCase) <= 0;
-
-                if (range.IsExclusion && inRange) return false;
-                if (!range.IsExclusion && inRange) included = true;
-            }
-            return included;
-        }).OrderBy(kvp => kvp.Key);
     }
 
     private static ServiceResult<bool> ValidateOptions(ReportOptions options)

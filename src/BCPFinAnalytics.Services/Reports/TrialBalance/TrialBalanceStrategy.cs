@@ -229,12 +229,12 @@ public class TrialBalanceStrategy : IReportStrategy
                 switch (fmtRow.RowType)
                 {
                     case FormatRowType.Blank:
-                        reportRows.Add(BuildBlankRow());
+                        reportRows.Add(ReportFormatHelpers.BuildBlankRow());
                         break;
 
                     case FormatRowType.Title:
                         if (!fmtRow.Options.SuppressIfZero || reportRows.Any())
-                            reportRows.Add(BuildTitleRow(fmtRow.Label));
+                            reportRows.Add(ReportFormatHelpers.BuildTitleRow(fmtRow.Label));
                         break;
 
                     case FormatRowType.Range:
@@ -260,7 +260,7 @@ public class TrialBalanceStrategy : IReportStrategy
                     {
                         // SU — currentGroupTotal holds raw GL sum.
                         // Store raw for TO accumulation, apply sign for display only.
-                        var suDisplay = ApplySign(currentGroupTotal, fmtRow);
+                        var suDisplay = ReportFormatHelpers.ApplySign(currentGroupTotal, fmtRow);
                         subtotalAccumulators[fmtRow.SubtotId] = currentGroupTotal; // raw
 
                         var suppress = fmtRow.Options.SuppressZeroSubtotal && suDisplay == 0m;
@@ -280,7 +280,7 @@ public class TrialBalanceStrategy : IReportStrategy
                                 if (subtotalAccumulators.TryGetValue(id, out var v))
                                     grandRaw += v;
 
-                        var grandDisplay = ApplySign(grandRaw, fmtRow);
+                        var grandDisplay = ReportFormatHelpers.ApplySign(grandRaw, fmtRow);
                         var suppress = fmtRow.Options.SuppressIfZero && grandDisplay == 0m;
                         if (!suppress)
                             reportRows.Add(BuildGrandTotalRow(
@@ -349,20 +349,6 @@ public class TrialBalanceStrategy : IReportStrategy
     //  Row builders
     // ══════════════════════════════════════════════════════════════
 
-    private static ReportRow BuildBlankRow() => new()
-    {
-        RowType     = RowType.SectionHeader,
-        AccountCode = string.Empty,
-        AccountName = string.Empty
-    };
-
-    private static ReportRow BuildTitleRow(string label) => new()
-    {
-        RowType     = RowType.SectionHeader,
-        AccountCode = string.Empty,
-        AccountName = label
-    };
-
     private static ReportRow BuildTotalRow(string label, decimal amount, bool wholeDollars) => new()
     {
         RowType     = RowType.Total,
@@ -404,12 +390,13 @@ public class TrialBalanceStrategy : IReportStrategy
         var rows = new List<ReportRow>();
 
         // Find all accounts that fall within the format row's resolved ranges
-        var matchingAccounts = GetMatchingAccounts(fmtRow.Ranges, balanceByAcct);
+        var matchingAccounts = ReportFormatHelpers.MatchAccounts(fmtRow.Ranges, balanceByAcct.Keys);
 
-        foreach (var (acctNum, acctData) in matchingAccounts)
+        foreach (var acctNum in matchingAccounts)
         {
+            var acctData   = balanceByAcct[acctNum];
             var rawBalance = acctData.Balance;
-            var signed    = ApplySign(rawBalance, fmtRow);
+            var signed     = ReportFormatHelpers.ApplySign(rawBalance, fmtRow);
             var display   = wholeDollars
                 ? Math.Round(signed, 0, MidpointRounding.AwayFromZero)
                 : signed;
@@ -459,11 +446,13 @@ public class TrialBalanceStrategy : IReportStrategy
         bool wholeDollars,
         ref decimal groupTotal)
     {
-        var matchingAccounts = GetMatchingAccounts(fmtRow.Ranges, balanceByAcct);
-        if (!matchingAccounts.Any()) return null;
+        var matchingAccounts = ReportFormatHelpers
+            .MatchAccounts(fmtRow.Ranges, balanceByAcct.Keys)
+            .ToList();
+        if (matchingAccounts.Count == 0) return null;
 
-        var rawBalance = matchingAccounts.Sum(a => a.Value.Balance);
-        var signed     = ApplySign(rawBalance, fmtRow);
+        var rawBalance = matchingAccounts.Sum(a => balanceByAcct[a].Balance);
+        var signed     = ReportFormatHelpers.ApplySign(rawBalance, fmtRow);
         var display    = wholeDollars
             ? Math.Round(signed, 0, MidpointRounding.AwayFromZero)
             : signed;
@@ -471,7 +460,7 @@ public class TrialBalanceStrategy : IReportStrategy
         groupTotal += rawBalance;  // accumulate RAW for SU/TO math
 
         // SM rows: all accounts summed — DrillDownRef carries all account numbers
-        var acctNums = matchingAccounts.Select(a => a.Key).ToList();
+        var acctNums = matchingAccounts;
         var drillDown = new DrillDownRef
         {
             AcctNums     = acctNums,
@@ -500,66 +489,6 @@ public class TrialBalanceStrategy : IReportStrategy
     // ══════════════════════════════════════════════════════════════
     //  Helpers
     // ══════════════════════════════════════════════════════════════
-
-    /// <summary>
-    /// Filters the balance dictionary to only accounts that fall within
-    /// the format row's resolved ranges (honoring exclusions).
-    /// </summary>
-    private static IEnumerable<KeyValuePair<string, AcctAggregate>> GetMatchingAccounts(
-        IReadOnlyList<ResolvedAccountRange> ranges,
-        Dictionary<string, AcctAggregate> balanceByAcct)
-    {
-        return balanceByAcct.Where(kvp =>
-        {
-            var acct = kvp.Key;
-            bool included = false;
-
-            foreach (var range in ranges)
-            {
-                bool inRange = string.Compare(acct, range.BegAcct,
-                                   StringComparison.OrdinalIgnoreCase) >= 0
-                            && string.Compare(acct, range.EndAcct,
-                                   StringComparison.OrdinalIgnoreCase) <= 0;
-
-                if (range.IsExclusion && inRange)
-                    return false;   // Explicitly excluded — skip immediately
-
-                if (!range.IsExclusion && inRange)
-                    included = true;
-            }
-
-            return included;
-        });
-    }
-
-    /// <summary>
-    /// Applies sign convention from format row DEBCRED and O= flags.
-    ///
-    /// MRI GL stores:
-    ///   Debits  as positive  (assets, expenses)
-    ///   Credits as negative  (liabilities, income)
-    ///
-    /// Sign pipeline:
-    ///   1. Start with raw GL amount
-    ///   2. If DEBCRED='C': negate (credit-normal account)
-    ///   3. If O=^ (ReverseVariance): negate again
-    ///   4. If O=R (ReverseAmount): negate
-    /// </summary>
-    private static decimal ApplySign(decimal amount, FormatRow fmtRow)
-    {
-        var result = amount;
-
-        if (fmtRow.DebCred == "C")
-            result = -result;
-
-        if (fmtRow.Options.ReverseVariance)
-            result = -result;
-
-        if (fmtRow.Options.ReverseAmount)
-            result = -result;
-
-        return result;
-    }
 
     /// <summary>
     /// Validates report options specific to Trial Balance.

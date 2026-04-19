@@ -223,12 +223,12 @@ public class TrialBalanceDCStrategy : IReportStrategy
                 switch (fmtRow.RowType)
                 {
                     case FormatRowType.Blank:
-                        reportRows.Add(BuildBlankRow());
+                        reportRows.Add(ReportFormatHelpers.BuildBlankRow());
                         break;
 
                     case FormatRowType.Title:
                         if (!fmtRow.Options.SuppressIfZero || reportRows.Any())
-                            reportRows.Add(BuildTitleRow(fmtRow.Label));
+                            reportRows.Add(ReportFormatHelpers.BuildTitleRow(fmtRow.Label));
                         break;
 
                     case FormatRowType.Range:
@@ -251,8 +251,8 @@ public class TrialBalanceDCStrategy : IReportStrategy
                     case FormatRowType.Subtotal:
                     {
                         // Store raw in accumulators; apply sign for display only
-                        var signedStarting = ApplySign(grpStarting, fmtRow);
-                        var signedActivity = ApplySign(grpActivity, fmtRow);
+                        var signedStarting = ReportFormatHelpers.ApplySign(grpStarting, fmtRow);
+                        var signedActivity = ReportFormatHelpers.ApplySign(grpActivity, fmtRow);
                         var (deb, cred)    = SplitDebitCredit(signedActivity);
                         var ending         = signedStarting + signedActivity;
 
@@ -282,8 +282,8 @@ public class TrialBalanceDCStrategy : IReportStrategy
                                     gtRawActivity += st.Debits; // Debits holds raw activity
                                 }
 
-                        var gtSignedStart    = ApplySign(gtRawStart, fmtRow);
-                        var gtSignedActivity = ApplySign(gtRawActivity, fmtRow);
+                        var gtSignedStart    = ReportFormatHelpers.ApplySign(gtRawStart, fmtRow);
+                        var gtSignedActivity = ReportFormatHelpers.ApplySign(gtRawActivity, fmtRow);
                         var (gtDeb, gtCred)  = SplitDebitCredit(gtSignedActivity);
                         var gtEnd            = gtSignedStart + gtSignedActivity;
 
@@ -356,20 +356,6 @@ public class TrialBalanceDCStrategy : IReportStrategy
     //  Row builders
     // ══════════════════════════════════════════════════════════════
 
-    private static ReportRow BuildBlankRow() => new()
-    {
-        RowType = RowType.SectionHeader,
-        AccountCode = string.Empty,
-        AccountName = string.Empty
-    };
-
-    private static ReportRow BuildTitleRow(string label) => new()
-    {
-        RowType = RowType.SectionHeader,
-        AccountCode = string.Empty,
-        AccountName = label
-    };
-
     private static ReportRow BuildTotalRow(
         string label, decimal starting, decimal? debits, decimal? credits,
         decimal ending, bool wholeDollars) => new()
@@ -401,12 +387,13 @@ public class TrialBalanceDCStrategy : IReportStrategy
         ref decimal groupActivity)
     {
         var rows = new List<ReportRow>();
-        var matching = GetMatchingAccounts(fmtRow.Ranges, balanceByAcct);
+        var matching = ReportFormatHelpers.MatchAccounts(fmtRow.Ranges, balanceByAcct.Keys);
 
-        foreach (var (acctNum, data) in matching)
+        foreach (var acctNum in matching)
         {
-            var signedStarting = ApplySign(data.StartingBalance, fmtRow);
-            var signedActivity = ApplySign(data.Activity, fmtRow);
+            var data = balanceByAcct[acctNum];
+            var signedStarting = ReportFormatHelpers.ApplySign(data.StartingBalance, fmtRow);
+            var signedActivity = ReportFormatHelpers.ApplySign(data.Activity, fmtRow);
             var (deb, cred)    = SplitDebitCredit(signedActivity);
             var ending         = signedStarting + signedActivity;
 
@@ -464,20 +451,22 @@ public class TrialBalanceDCStrategy : IReportStrategy
         ref decimal groupStarting,
         ref decimal groupActivity)
     {
-        var matching = GetMatchingAccounts(fmtRow.Ranges, balanceByAcct).ToList();
-        if (!matching.Any()) return null;
+        var matching = ReportFormatHelpers
+            .MatchAccounts(fmtRow.Ranges, balanceByAcct.Keys)
+            .ToList();
+        if (matching.Count == 0) return null;
 
-        var rawStarting = matching.Sum(a => a.Value.StartingBalance);
-        var rawActivity = matching.Sum(a => a.Value.Activity);
-        var signedStart = ApplySign(rawStarting, fmtRow);
-        var signedAct   = ApplySign(rawActivity, fmtRow);
+        var rawStarting = matching.Sum(a => balanceByAcct[a].StartingBalance);
+        var rawActivity = matching.Sum(a => balanceByAcct[a].Activity);
+        var signedStart = ReportFormatHelpers.ApplySign(rawStarting, fmtRow);
+        var signedAct   = ReportFormatHelpers.ApplySign(rawActivity, fmtRow);
         var (deb, cred) = SplitDebitCredit(signedAct);
         var ending      = signedStart + signedAct;
 
         groupStarting += rawStarting;  // accumulate RAW
         groupActivity += rawActivity;  // accumulate RAW
 
-        var acctNums  = matching.Select(a => a.Key).ToList();
+        var acctNums  = matching;
         var drillDown = new DrillDownRef
         {
             AcctNums     = acctNums,
@@ -542,36 +531,6 @@ public class TrialBalanceDCStrategy : IReportStrategy
         if (signedActivity > 0m) return (signedActivity, null);
         if (signedActivity < 0m) return (null, signedActivity); // strategy keeps negative; BuildCells takes abs
         return (null, null);
-    }
-
-    private static IEnumerable<KeyValuePair<string, AcctAggregate>> GetMatchingAccounts(
-        IReadOnlyList<ResolvedAccountRange> ranges,
-        Dictionary<string, AcctAggregate> balanceByAcct)
-    {
-        return balanceByAcct.Where(kvp =>
-        {
-            var acct = kvp.Key;
-            bool included = false;
-            foreach (var range in ranges)
-            {
-                bool inRange =
-                    string.Compare(acct, range.BegAcct, StringComparison.OrdinalIgnoreCase) >= 0
-                 && string.Compare(acct, range.EndAcct, StringComparison.OrdinalIgnoreCase) <= 0;
-
-                if (range.IsExclusion && inRange) return false;
-                if (!range.IsExclusion && inRange) included = true;
-            }
-            return included;
-        });
-    }
-
-    private static decimal ApplySign(decimal amount, FormatRow fmtRow)
-    {
-        var result = amount;
-        if (fmtRow.DebCred == "C")   result = -result;
-        if (fmtRow.Options.ReverseVariance)  result = -result;
-        if (fmtRow.Options.ReverseAmount) result = -result;
-        return result;
     }
 
     private static ServiceResult<bool> ValidateOptions(ReportOptions options)
