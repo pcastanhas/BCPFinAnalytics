@@ -16,6 +16,7 @@ html, body {
     left: 0;
     right: 0;
     bottom: 0;
+    height: calc(100vh - 64px);   /* explicit height so children can resolve height:100% */
     padding: 8px 12px;
     overflow: hidden;
     display: flex;
