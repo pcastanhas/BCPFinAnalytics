@@ -33,6 +33,7 @@ public class Trailing12BudgetStrategy : IReportStrategy
     private readonly ILogger<Trailing12BudgetStrategy> _logger;
 
     private const string ColPrefix = "M_";
+    private const string ColTotal  = "M_TOTAL";
 
     private sealed record AcctAggregate(
         string AcctName,
@@ -233,6 +234,15 @@ public class Trailing12BudgetStrategy : IReportStrategy
                 })
                 .ToList();
 
+            columns.Add(new ReportColumn
+            {
+                ColumnId = ColTotal,
+                Header   = "Total",
+                Width    = 120,
+                DataType = ColumnDataType.Currency,
+                CssClass = "col-header-total"
+            });
+
             // ── Metadata ───────────────────────────────────────────────────
             var entityDisplay = options.SelectedIds.Count == 1
                 ? options.SelectedIds[0]
@@ -406,10 +416,12 @@ public class Trailing12BudgetStrategy : IReportStrategy
             ? Math.Round(v, 0, MidpointRounding.AwayFromZero) : v;
 
         var cells = new Dictionary<string, CellValue>();
+        decimal total = 0m;
 
         foreach (var period in periods)
         {
             var amount = Round(monthly[period]);
+            total += amount;
             var colId  = ColPrefix + period;
 
             if (acctNum != null && glParams != null && budgetType != null)
@@ -432,6 +444,10 @@ public class Trailing12BudgetStrategy : IReportStrategy
                 cells[colId] = new CellValue(amount == 0m ? null : amount);
             }
         }
+
+        // Total column — non-drillable
+        var roundedTotal = Round(total);
+        cells[ColTotal] = new CellValue(roundedTotal == 0m ? null : roundedTotal);
 
         return cells;
     }

@@ -39,6 +39,7 @@ public class Trailing12Strategy : IReportStrategy
 
     // Column ID prefix — actual column IDs are "M_YYYYMM"
     private const string ColPrefix = "M_";
+    private const string ColTotal  = "M_TOTAL";
 
     private sealed record AcctAggregate(
         string AcctName,
@@ -225,6 +226,15 @@ public class Trailing12Strategy : IReportStrategy
                     DataType = ColumnDataType.Currency
                 })
                 .ToList();
+
+            columns.Add(new ReportColumn
+            {
+                ColumnId = ColTotal,
+                Header   = "Total",
+                Width    = 120,
+                DataType = ColumnDataType.Currency,
+                CssClass = "col-header-total"
+            });
 
             // ── Step 11: Metadata ──────────────────────────────────────────
             var entityDisplay = options.SelectedIds.Count == 1
@@ -430,10 +440,12 @@ public class Trailing12Strategy : IReportStrategy
             ? Math.Round(v, 0, MidpointRounding.AwayFromZero) : v;
 
         var cells = new Dictionary<string, CellValue>();
+        decimal total = 0m;
 
         foreach (var period in periods)
         {
             var amount = Round(monthly[period]);
+            total += amount;
             var colId  = ColPrefix + period;
 
             if (acctNum != null && glParams != null)
@@ -457,6 +469,10 @@ public class Trailing12Strategy : IReportStrategy
                 cells[colId] = new CellValue(amount == 0m ? null : amount);
             }
         }
+
+        // Total column — non-drillable
+        var roundedTotal = Round(total);
+        cells[ColTotal] = new CellValue(roundedTotal == 0m ? null : roundedTotal);
 
         return cells;
     }
