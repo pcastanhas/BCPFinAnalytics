@@ -228,17 +228,18 @@ public class IncomeStatementStrategy : IReportStrategy
 
                     case FormatRowType.Subtotal:
                     {
-                        // Display with sign applied, store raw for TO
-                        var sPtdA = ApplySign(grpPtdA, fmtRow);
-                        var sPtdB = ApplySign(grpPtdB, fmtRow);
+                        // Group totals are already signed from RA accumulation.
+                        // Apply SU's own ReverseAmount flag if present, then calc variance.
+                        var sPtdA = fmtRow.Options.ReverseAmount ? -grpPtdA : grpPtdA;
+                        var sPtdB = fmtRow.Options.ReverseAmount ? -grpPtdB : grpPtdB;
                         var sPtdV = CalcVariance(sPtdA, sPtdB, fmtRow);
                         var sPtdP = CalcVarPct(sPtdV, sPtdB);
-                        var sYtdA = ApplySign(grpYtdA, fmtRow);
-                        var sYtdB = ApplySign(grpYtdB, fmtRow);
+                        var sYtdA = fmtRow.Options.ReverseAmount ? -grpYtdA : grpYtdA;
+                        var sYtdB = fmtRow.Options.ReverseAmount ? -grpYtdB : grpYtdB;
                         var sYtdV = CalcVariance(sYtdA, sYtdB, fmtRow);
                         var sYtdP = CalcVarPct(sYtdV, sYtdB);
 
-                        subtotalAccs[fmtRow.SubtotId] = (grpPtdA, grpPtdB, grpYtdA, grpYtdB);
+                        subtotalAccs[fmtRow.SubtotId] = (sPtdA, sPtdB, sYtdA, sYtdB);
 
                         var suppress = fmtRow.Options.SuppressZeroSubtotal
                             && sPtdA == 0m && sPtdB == 0m && sYtdA == 0m && sYtdB == 0m;
@@ -262,12 +263,12 @@ public class IncomeStatementStrategy : IReportStrategy
                                     gtYtdA += st.YtdA; gtYtdB += st.YtdB;
                                 }
 
-                        var gPtdA = ApplySign(gtPtdA, fmtRow);
-                        var gPtdB = ApplySign(gtPtdB, fmtRow);
+                        var gPtdA = fmtRow.Options.ReverseAmount ? -gtPtdA : gtPtdA;
+                        var gPtdB = fmtRow.Options.ReverseAmount ? -gtPtdB : gtPtdB;
                         var gPtdV = CalcVariance(gPtdA, gPtdB, fmtRow);
                         var gPtdP = CalcVarPct(gPtdV, gPtdB);
-                        var gYtdA = ApplySign(gtYtdA, fmtRow);
-                        var gYtdB = ApplySign(gtYtdB, fmtRow);
+                        var gYtdA = fmtRow.Options.ReverseAmount ? -gtYtdA : gtYtdA;
+                        var gYtdB = fmtRow.Options.ReverseAmount ? -gtYtdB : gtYtdB;
                         var gYtdV = CalcVariance(gYtdA, gYtdB, fmtRow);
                         var gYtdP = CalcVarPct(gYtdV, gYtdB);
 
@@ -387,13 +388,13 @@ public class IncomeStatementStrategy : IReportStrategy
 
         var cells = new Dictionary<string, CellValue>
         {
-            [ColPtdActual] = new(Round(ptdA)),                        // always show — drill-down on zero
-            [ColPtdBudget] = new(ptdB == 0m ? null : Round(ptdB)),
-            [ColPtdVar]    = new(ptdV == 0m ? null : Round(ptdV)),
+            [ColPtdActual] = new(Round(ptdA)),
+            [ColPtdBudget] = new(Round(ptdB)),          // always show 0 — variance must calculate
+            [ColPtdVar]    = new(Round(ptdV)),           // always show — 0 budget = full variance
             [ColPtdVarPct] = BuildVarPctCell(ptdP),
-            [ColYtdActual] = new(Round(ytdA)),                        // always show — drill-down on zero
-            [ColYtdBudget] = new(ytdB == 0m ? null : Round(ytdB)),
-            [ColYtdVar]    = new(ytdV == 0m ? null : Round(ytdV)),
+            [ColYtdActual] = new(Round(ytdA)),
+            [ColYtdBudget] = new(Round(ytdB)),           // always show 0
+            [ColYtdVar]    = new(Round(ytdV)),
             [ColYtdVarPct] = BuildVarPctCell(ytdP),
         };
         return cells;
@@ -439,11 +440,11 @@ public class IncomeStatementStrategy : IReportStrategy
             var sYtdV = CalcVariance(sYtdA, sYtdB, fmtRow);
             var sYtdP = CalcVarPct(sYtdV, sYtdB);
 
-            // Accumulate raw for SU/TO math
-            grpPtdA += data.PtdActual;
-            grpPtdB += data.PtdBudget;
-            grpYtdA += data.YtdActual;
-            grpYtdB += data.YtdBudget;
+            // Accumulate signed values — SU/TO use same sign basis as RA display
+            grpPtdA += sPtdA;
+            grpPtdB += sPtdB;
+            grpYtdA += sYtdA;
+            grpYtdB += sYtdB;
 
             var formattedAcct = AccountNumberFormatter.Format(
                 acctNum, glInfo.AcctLgt, glInfo.AcctDsp);
@@ -514,10 +515,10 @@ public class IncomeStatementStrategy : IReportStrategy
         var sYtdA = ApplySign(rawYtdA, fmtRow);
         var sYtdB = ApplySign(rawYtdB, fmtRow);
 
-        grpPtdA += rawPtdA;
-        grpPtdB += rawPtdB;
-        grpYtdA += rawYtdA;
-        grpYtdB += rawYtdB;
+        grpPtdA += sPtdA;
+        grpPtdB += sPtdB;
+        grpYtdA += sYtdA;
+        grpYtdB += sYtdB;
 
         var smPtdV = CalcVariance(sPtdA, sPtdB, fmtRow);
         var smYtdV = CalcVariance(sYtdA, sYtdB, fmtRow);
