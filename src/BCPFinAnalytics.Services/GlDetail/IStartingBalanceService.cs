@@ -7,9 +7,10 @@ namespace BCPFinAnalytics.Services.GlDetail;
 /// Retrieves the starting balance for a GL drill-down — the balance as of the
 /// period immediately before <see cref="DrillDownRef.PeriodFrom"/>.
 ///
-/// Wraps <c>IStartingBalanceRepository</c> and surfaces errors via
-/// <c>ServiceResult</c> so the dialog can render a friendly error state
-/// rather than crashing on a DB blip.
+/// Wraps <c>IGlDataRepository.GetGlStartingBalanceAsync</c> (filtering to the
+/// drill's accounts and summing) and surfaces errors via <c>ServiceResult</c>
+/// so the dialog can render a friendly error state rather than crashing on a
+/// DB blip.
 /// </summary>
 public interface IStartingBalanceService
 {

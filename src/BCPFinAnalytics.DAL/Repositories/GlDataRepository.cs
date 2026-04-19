@@ -10,9 +10,9 @@ namespace BCPFinAnalytics.DAL.Repositories;
 /// GL-backed report column in every strategy.
 ///
 /// BALFOR correctness:
-///   GetGlStartingBalance encodes the four-case matrix ported from MRI's
-///     canonical starting-balance SQL (see <see cref="StartingBalanceRepository"/>
-///     which this implementation largely supersedes).
+///   GetGlStartingBalance encodes the BALFOR-aware range logic to return the
+///     true "balance at end of (period-1)" for both B/C (snapshot + activity
+///     from anchor) and I (activity from fiscal-year start) account types.
 ///   GetGlActivity filters BALFOR='N' so year-opening snapshot rows never
 ///     double-count alongside January activity rows.
 /// </summary>
@@ -241,10 +241,6 @@ public class GlDataRepository : IGlDataRepository
     }
 
     // ── Private helpers ──────────────────────────────────────────────
-    // Intentionally not shared with StartingBalanceRepository — that repo
-    // is still used by the GL drill-down dialog for per-drill starting
-    // balances. Both will be consolidated once all 5 strategies are
-    // migrated onto this new surface and the old repo is deleted.
 
     private static async Task<string> GetBalForAnchorAsync(
         System.Data.Common.DbConnection conn, string entityId, string period)

@@ -44,7 +44,6 @@ public static class ServiceRegistration
         services.AddScoped<IBalForRepository, BalForRepository>();
         services.AddScoped<IUnpostedRERepository, UnpostedRERepository>();
         services.AddScoped<IGlDrillDownRepository, GlDrillDownRepository>();
-        services.AddScoped<IStartingBalanceRepository, StartingBalanceRepository>();
         services.AddScoped<IBudgetDrillDownRepository, BudgetDrillDownRepository>();
         services.AddScoped<IGlDataRepository, GlDataRepository>();
         services.AddScoped<IBudgetDataRepository, BudgetDataRepository>();
