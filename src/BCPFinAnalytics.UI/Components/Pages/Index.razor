@@ -4,6 +4,7 @@
 @inject UserSessionService UserSession
 @inject ILogger<Index> Logger
 @inject NavigationManager NavigationManager
+@inject IHttpContextAccessor HttpContextAccessor
 
 <PageTitle>BCPFinAnalytics</PageTitle>
 
@@ -33,10 +34,23 @@ else
 
     protected override void OnInitialized()
     {
-        var uri    = new Uri(NavigationManager.Uri);
-        var query  = System.Web.HttpUtility.ParseQueryString(uri.Query);
-        var db     = query["db"]?.Trim();
-        var userId = query["userid"]?.Trim();
+        // Prefer HttpContext query string (reliable on initial Blazor Server request)
+        // Fall back to NavigationManager for subsequent navigations
+        var httpQuery = HttpContextAccessor.HttpContext?.Request.Query;
+        string? db, userId;
+
+        if (httpQuery != null && (httpQuery.ContainsKey("db") || httpQuery.ContainsKey("userid")))
+        {
+            db     = httpQuery["db"].FirstOrDefault()?.Trim();
+            userId = httpQuery["userid"].FirstOrDefault()?.Trim();
+        }
+        else
+        {
+            var uri   = new Uri(NavigationManager.Uri);
+            var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+            db     = query["db"]?.Trim();
+            userId = query["userid"]?.Trim();
+        }
 
         Logger.LogInformation(
             "BCPFinAnalytics session initializing — db={DbKey} userid={UserId}",
