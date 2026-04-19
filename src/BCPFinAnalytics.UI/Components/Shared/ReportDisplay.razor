@@ -54,7 +54,7 @@
                 <th style="text-align:left; min-width:200px;">Description</th>
                 @foreach (var col in Result.Columns)
                 {
-                    <th style="width:@(col.Width.HasValue ? col.Width + "px" : "120px");">
+                    <th style="width:@(col.Width.HasValue ? col.Width + "px" : "120px");" class="@col.CssClass">
                         @col.Header
                     </th>
                 }

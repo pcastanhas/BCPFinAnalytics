@@ -21,6 +21,12 @@ public class ReportColumn
     /// <summary>Optional preferred display width hint (pixels). Renderers may ignore this.</summary>
     public int? Width { get; set; }
 
+    /// <summary>
+    /// Optional CSS class applied to this column's header th element.
+    /// Used for budget column styling (e.g. "col-header-budget").
+    /// </summary>
+    public string CssClass { get; set; } = string.Empty;
+
     /// <summary>When true, the column header and values are right-aligned.</summary>
     public bool RightAlign { get; set; } = true;
 }
