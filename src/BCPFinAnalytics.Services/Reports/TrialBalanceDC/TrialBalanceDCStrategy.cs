@@ -249,7 +249,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
                     case FormatRowType.Range:
                         grpStarting = 0m; grpActivity = 0m;
                         reportRows.AddRange(BuildRangeRows(
-                            fmtRow, balanceByAcct, glParams, glInfo,
+                            fmtRow, balanceByAcct, glParams, startPeriod, glInfo,
                             options.WholeDollars,
                             ref grpStarting, ref grpActivity));
                         break;
@@ -257,7 +257,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
                     case FormatRowType.Summary:
                         grpStarting = 0m; grpActivity = 0m;
                         var smRow = BuildSummaryRow(
-                            fmtRow, balanceByAcct, glParams,
+                            fmtRow, balanceByAcct, glParams, startPeriod,
                             options.WholeDollars,
                             ref grpStarting, ref grpActivity);
                         if (smRow != null) reportRows.Add(smRow);
@@ -409,6 +409,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
         FormatRow fmtRow,
         Dictionary<string, AcctAggregate> balanceByAcct,
         GlQueryParameters glParams,
+        string startPeriod,
         GLDto glInfo,
         bool wholeDollars,
         ref decimal groupStarting,
@@ -430,13 +431,18 @@ public class TrialBalanceDCStrategy : IReportStrategy
             var formattedAcct = AccountNumberFormatter.Format(
                 acctNum, glInfo.AcctLgt, glInfo.AcctDsp);
 
-            // Drill-down on whichever of Debit/Credit column has activity
+            // Drill-down on whichever of Debit/Credit column has activity.
+            // Drill window = [StartPeriod, EndPeriod] — exactly the window whose
+            // activity produced the Debits/Credits value the user clicked. The
+            // dialog's Starting Balance will be the balance as of StartPeriod-1
+            // and the Ending Balance = Starting + Net Activity, which reconciles
+            // to the Starting Balance / Ending Balance columns shown in the report.
             var drillColId = deb.HasValue ? ColDebits : ColCredits;
             var drillDown  = new DrillDownRef
             {
                 AcctNums         = new[] { acctNum },
                 EntityIds        = glParams.EntityIds,
-                PeriodFrom       = glParams.BegYrPd,
+                PeriodFrom       = startPeriod,
                 PeriodTo         = glParams.EndPeriod,
                 BasisList        = glParams.BasisList,
                 DisplayLabel     = $"{formattedAcct} · {data.AcctName}"
@@ -468,6 +474,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
         FormatRow fmtRow,
         Dictionary<string, AcctAggregate> balanceByAcct,
         GlQueryParameters glParams,
+        string startPeriod,
         bool wholeDollars,
         ref decimal groupStarting,
         ref decimal groupActivity)
@@ -490,7 +497,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
         {
             AcctNums     = acctNums,
             EntityIds    = glParams.EntityIds,
-            PeriodFrom   = glParams.BegYrPd,
+            PeriodFrom   = startPeriod,
             PeriodTo     = glParams.EndPeriod,
             BasisList    = glParams.BasisList,
             DisplayLabel = acctNums.Count == 1
