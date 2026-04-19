@@ -16,6 +16,7 @@ using BCPFinAnalytics.Services.Reports.TrialBalanceDC;
 using BCPFinAnalytics.Services.Reports.IncomeStatement;
 using BCPFinAnalytics.Services.Reports.Trailing12;
 using BCPFinAnalytics.Services.Reports.Forecast12;
+using BCPFinAnalytics.Services.Engine;
 using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;
 using Microsoft.Extensions.Configuration;
@@ -65,6 +66,7 @@ public static class ServiceRegistration
         services.AddScoped<EntitySelectionResolver>();
         services.AddScoped<GlFilterBuilder>();
         services.AddScoped<IUnpostedREService, UnpostedREService>();
+        services.AddScoped<IReportEngine, ReportEngine>();
 
         // ──────────────────────────────────────────────
         //  Report Strategies — add one entry per report
