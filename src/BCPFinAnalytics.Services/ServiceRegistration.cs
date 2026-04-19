@@ -72,7 +72,6 @@ public static class ServiceRegistration
         // ──────────────────────────────────────────────
         services.AddScoped<IReportStrategy, TrialBalanceStrategy>();
         services.AddScoped<IReportStrategy, TrialBalanceDCStrategy>();
-        services.AddScoped<IIncomeStatementRepository, IncomeStatementRepository>();
         services.AddScoped<IReportStrategy, IncomeStatementStrategy>();
         services.AddScoped<ITrailing12Repository, Trailing12Repository>();
         services.AddScoped<IReportStrategy, Trailing12Strategy>();

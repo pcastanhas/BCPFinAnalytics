@@ -5,6 +5,7 @@ using BCPFinAnalytics.Common.Interfaces;
 using BCPFinAnalytics.Common.Models;
 using BCPFinAnalytics.Common.Models.Format;
 using BCPFinAnalytics.Common.Wrappers;
+using BCPFinAnalytics.DAL.Interfaces;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Interfaces;
@@ -42,7 +43,8 @@ public class IncomeStatementStrategy : IReportStrategy
 {
     private readonly IFormatLoader _formatLoader;
     private readonly GlFilterBuilder _glFilterBuilder;
-    private readonly IIncomeStatementRepository _repository;
+    private readonly IGlDataRepository _glData;
+    private readonly IBudgetDataRepository _budgetData;
     private readonly ILookupService _lookupService;
     private readonly AppSettings _appSettings;
     private readonly ILogger<IncomeStatementStrategy> _logger;
@@ -68,14 +70,16 @@ public class IncomeStatementStrategy : IReportStrategy
     public IncomeStatementStrategy(
         IFormatLoader formatLoader,
         GlFilterBuilder glFilterBuilder,
-        IIncomeStatementRepository repository,
+        IGlDataRepository glData,
+        IBudgetDataRepository budgetData,
         ILookupService lookupService,
         IOptions<AppSettings> appSettings,
         ILogger<IncomeStatementStrategy> logger)
     {
         _formatLoader    = formatLoader;
         _glFilterBuilder = glFilterBuilder;
-        _repository      = repository;
+        _glData          = glData;
+        _budgetData      = budgetData;
         _lookupService   = lookupService;
         _appSettings     = appSettings.Value;
         _logger          = logger;
@@ -146,32 +150,56 @@ public class IncomeStatementStrategy : IReportStrategy
                 "IncomeStatementStrategy — PTD={Start}–{End} YTD={BegYr}–{End2} Budget={Budget}",
                 startPeriod, endPeriod, begYrPd, endPeriod, options.Budget);
 
-            // ── Step 6: Run 4 queries in parallel ─────────────────────────
-            var tPtdActual = _repository.GetActualAsync(
-                options.DbKey, glParams, startPeriod, endPeriod);
-            var tPtdBudget = _repository.GetBudgetAsync(
-                options.DbKey, glParams, startPeriod, endPeriod, options.Budget);
-            var tYtdActual = _repository.GetActualAsync(
-                options.DbKey, glParams, begYrPd, endPeriod);
-            var tYtdBudget = _repository.GetBudgetAsync(
-                options.DbKey, glParams, begYrPd, endPeriod, options.Budget);
+            // ── Step 6: Fetch data from primitives ────────────────────────
+            // IS's four data columns compose from the three primitives:
+            //   PTD Actual = GetGlActivity(StartPeriod, EndPeriod)
+            //   PTD Budget = GetBudgetAmount(StartPeriod, EndPeriod, BudgetType)
+            //   YTD Actual = GetGlActivity(BegYrPd, EndPeriod)
+            //   YTD Budget = GetBudgetAmount(BegYrPd, EndPeriod, BudgetType)
+            // Variance/variance-% columns are computed from these four.
+            //
+            // Fired in parallel via Task.WhenAll. The primitives handle
+            // BALFOR, basis expansion, and per-account aggregation internally.
+            _logger.LogInformation(
+                "IncomeStatementStrategy — Fetching data from primitives.");
+
+            var tPtdActual = _glData.GetGlActivityAsync(
+                options.DbKey, startPeriod, endPeriod,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
+
+            var tYtdActual = _glData.GetGlActivityAsync(
+                options.DbKey, begYrPd, endPeriod,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
+
+            var tPtdBudget = _budgetData.GetBudgetAmountAsync(
+                options.DbKey, startPeriod, endPeriod, options.Budget,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
+
+            var tYtdBudget = _budgetData.GetBudgetAmountAsync(
+                options.DbKey, begYrPd, endPeriod, options.Budget,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
 
             await Task.WhenAll(tPtdActual, tPtdBudget, tYtdActual, tYtdBudget);
 
-            // ── Step 7: Aggregate across entities ─────────────────────────
-            var ptdActual = AggregateRaw(tPtdActual.Result);
-            var ptdBudget = AggregateRaw(tPtdBudget.Result);
-            var ytdActual = AggregateRaw(tYtdActual.Result);
-            var ytdBudget = AggregateRaw(tYtdBudget.Result);
+            var ptdActual = tPtdActual.Result;
+            var ptdBudget = tPtdBudget.Result;
+            var ytdActual = tYtdActual.Result;
+            var ytdBudget = tYtdBudget.Result;
 
-            // ── Step 8: Build combined account dictionary ──────────────────
+            // ── Step 7: Build combined account dictionary ──────────────────
             var allAccts = ptdActual.Keys
                 .Union(ptdBudget.Keys)
                 .Union(ytdActual.Keys)
                 .Union(ytdBudget.Keys)
                 .ToHashSet();
 
-            // Build unified aggregate — get AcctName/Type from whichever source has it
+            // Unified aggregate — metadata (AcctName, Type) from whichever
+            // primitive first has the account; all sources pull from GACC
+            // so they agree.
             var combined = new Dictionary<string, AcctAggregate>();
             foreach (var acct in allAccts)
             {
@@ -182,10 +210,10 @@ public class IncomeStatementStrategy : IReportStrategy
 
                 combined[acct] = new AcctAggregate(
                     meta!.AcctName, meta.Type,
-                    ptdActual.GetValueOrDefault(acct)?.Balance ?? 0m,
-                    ptdBudget.GetValueOrDefault(acct)?.Balance ?? 0m,
-                    ytdActual.GetValueOrDefault(acct)?.Balance ?? 0m,
-                    ytdBudget.GetValueOrDefault(acct)?.Balance ?? 0m
+                    ptdActual.GetValueOrDefault(acct)?.Amount ?? 0m,
+                    ptdBudget.GetValueOrDefault(acct)?.Amount ?? 0m,
+                    ytdActual.GetValueOrDefault(acct)?.Amount ?? 0m,
+                    ytdBudget.GetValueOrDefault(acct)?.Amount ?? 0m
                 );
             }
 
@@ -595,16 +623,6 @@ public class IncomeStatementStrategy : IReportStrategy
         if (budget == 0m) return null;
         return variance / Math.Abs(budget) * 100m;
     }
-
-    private sealed record SimpleAcct(string AcctName, string Type, decimal Balance);
-
-    private static Dictionary<string, SimpleAcct> AggregateRaw(
-        IEnumerable<IncomeStatementRawRow> rows) =>
-        rows.GroupBy(r => r.AcctNum)
-            .ToDictionary(g => g.Key,
-                g => new SimpleAcct(g.First().AcctName, g.First().Type, g.Sum(r => r.Amount)));
-
-
 
     private static IEnumerable<KeyValuePair<string, AcctAggregate>> GetMatchingAccounts(
         IReadOnlyList<ResolvedAccountRange> ranges,
