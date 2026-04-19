@@ -492,6 +492,12 @@ html, body {
     padding: 0;
 }
 
+/* Sidebar body wraps OptionsPanel so we can hide it via CSS (preserving component state)
+   instead of unmounting the component (which would destroy state + re-run DB lookups). */
+.sidebar-body-hidden {
+    display: none;
+}
+
 /* Tighten up the options panel inside the sidebar */
 .report-sidebar .options-panel {
     margin-bottom: 0 !important;

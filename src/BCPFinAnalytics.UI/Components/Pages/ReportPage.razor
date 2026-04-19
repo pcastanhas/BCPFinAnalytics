@@ -43,14 +43,13 @@
             }
         </div>
 
-        @if (!_sidebarCollapsed)
-        {
+        <div class="sidebar-body @(_sidebarCollapsed ? "sidebar-body-hidden" : "")">
             @if (_isRunning)
             {
                 <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-1" />
             }
             <OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
-        }
+        </div>
     </div>
 
     <!-- ── CONTENT — Report ────────────────────────────── -->
