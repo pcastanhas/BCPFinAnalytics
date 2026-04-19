@@ -46,6 +46,8 @@ public static class ServiceRegistration
         services.AddScoped<IGlDrillDownRepository, GlDrillDownRepository>();
         services.AddScoped<IStartingBalanceRepository, StartingBalanceRepository>();
         services.AddScoped<IBudgetDrillDownRepository, BudgetDrillDownRepository>();
+        services.AddScoped<IGlDataRepository, GlDataRepository>();
+        services.AddScoped<IBudgetDataRepository, BudgetDataRepository>();
 
         // ──────────────────────────────────────────────
         //  Session (Scoped — one per Blazor circuit)
