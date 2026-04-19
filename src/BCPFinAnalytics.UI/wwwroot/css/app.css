@@ -607,3 +607,14 @@ html, body {
     color: #b71c1c !important;
     font-weight: 600;
 }
+
+/* Budget drill-down link — slightly different colour from GL drill */
+.budget-drill-link {
+    color: #1b5e20 !important;
+    border-bottom: 1px dashed #1b5e20;
+}
+
+.budget-drill-link:hover {
+    color: #2e7d32 !important;
+    background-color: #f1f8e9;
+}

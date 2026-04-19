@@ -75,12 +75,20 @@
                     @foreach (var col in Result.Columns)
                     {
                         var cell = row.Cells.TryGetValue(col.ColumnId, out var cv) ? cv : CellValue.Empty;
-                        <td class="numeric @(cell.IsDrillable ? "drillable" : "") @(cell.CssClass ?? "")">
+                        <td class="numeric @(cell.IsDrillable || cell.IsBudgetDrillable ? "drillable" : "") @(cell.CssClass ?? "")">
                             @if (cell.IsDrillable)
                             {
                                 <span class="drill-link"
                                       @onclick="async () => await OnCellClicked(cell.DrillDown!)"
                                       title="Click to view GL detail">
+                                    @RenderCellValue(row, col, cell)
+                                </span>
+                            }
+                            else if (cell.IsBudgetDrillable)
+                            {
+                                <span class="drill-link budget-drill-link"
+                                      @onclick="async () => await OnBudgetCellClicked(cell.BudgetDrillDown!)"
+                                      title="Click to view budget detail">
                                     @RenderCellValue(row, col, cell)
                                 </span>
                             }
@@ -150,6 +158,25 @@
 
         await DialogService.ShowAsync<GLDetailDialog>(
             "GL Detail", parameters, options);
+    }
+
+    private async Task OnBudgetCellClicked(BudgetDrillDownRef drillDown)
+    {
+        var parameters = new DialogParameters
+        {
+            { nameof(BudgetDetailDialog.DrillDown), drillDown }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey  = true,
+            MaxWidth          = MaxWidth.Large,
+            FullWidth         = true,
+            CloseButton       = true
+        };
+
+        await DialogService.ShowAsync<BudgetDetailDialog>(
+            "Budget Detail", parameters, options);
     }
 
     private string FormatCurrency(decimal value)

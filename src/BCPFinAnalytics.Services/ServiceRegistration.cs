@@ -41,6 +41,7 @@ public static class ServiceRegistration
         services.AddScoped<IBalForRepository, BalForRepository>();
         services.AddScoped<IUnpostedRERepository, UnpostedRERepository>();
         services.AddScoped<IGlDetailRepository, GlDetailRepository>();
+        services.AddScoped<IBudgetDetailRepository, BudgetDetailRepository>();
 
         // ──────────────────────────────────────────────
         //  Session (Scoped — one per Blazor circuit)

@@ -213,7 +213,7 @@ public class IncomeStatementStrategy : IReportStrategy
                         grpPtdA = grpPtdB = grpYtdA = grpYtdB = 0;
                         var raRows = BuildRangeRows(
                             fmtRow, combined, glParams, glInfo, options.WholeDollars,
-                            startPeriod,
+                            startPeriod, options.Budget,
                             ref grpPtdA, ref grpPtdB, ref grpYtdA, ref grpYtdB);
                         reportRows.AddRange(raRows);
                         break;
@@ -423,6 +423,7 @@ public class IncomeStatementStrategy : IReportStrategy
         GLDto glInfo,
         bool wholeDollars,
         string startPeriod,
+        string budgetType,
         ref decimal grpPtdA, ref decimal grpPtdB,
         ref decimal grpYtdA, ref decimal grpYtdB)
     {
@@ -478,9 +479,33 @@ public class IncomeStatementStrategy : IReportStrategy
                 sYtdA, sYtdB, sYtdV, sYtdP,
                 wholeDollars);
 
-            // Wire drill-downs — attach even if amount is zero so user can verify
+            // GL drill-downs on actual columns
             cells[ColPtdActual] = cells[ColPtdActual] with { DrillDown = ptdDrill };
             cells[ColYtdActual] = cells[ColYtdActual] with { DrillDown = ytdDrill };
+
+            // Budget drill-downs on budget columns
+            var ptdBudDrill = new BudgetDrillDownRef
+            {
+                AcctNums     = new[] { acctNum },
+                EntityIds    = glParams.EntityIds,
+                PeriodFrom   = startPeriod,
+                PeriodTo     = glParams.EndPeriod,
+                BudgetType   = budgetType,
+                TotalBudget  = sPtdB,
+                DisplayLabel = $"{formattedAcct} · {data.AcctName} (PTD Budget)"
+            };
+            var ytdBudDrill = new BudgetDrillDownRef
+            {
+                AcctNums     = new[] { acctNum },
+                EntityIds    = glParams.EntityIds,
+                PeriodFrom   = glParams.BegYrPd,
+                PeriodTo     = glParams.EndPeriod,
+                BudgetType   = budgetType,
+                TotalBudget  = sYtdB,
+                DisplayLabel = $"{formattedAcct} · {data.AcctName} (YTD Budget)"
+            };
+            cells[ColPtdBudget] = cells[ColPtdBudget] with { BudgetDrillDown = ptdBudDrill };
+            cells[ColYtdBudget] = cells[ColYtdBudget] with { BudgetDrillDown = ytdBudDrill };
 
             rows.Add(new ReportRow
             {

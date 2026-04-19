@@ -1,0 +1,285 @@
+@using BCPFinAnalytics.Common.DTOs
+@using BCPFinAnalytics.Common.Models
+@using BCPFinAnalytics.DAL.Interfaces
+@using BCPFinAnalytics.Services.Session
+@inject IBudgetDetailRepository BudgetDetailRepository
+@inject UserSessionService UserSession
+@inject ISnackbar Snackbar
+@inject BCPFinAnalytics.UI.Services.AlertService AlertSvc
+@inject ILogger<BudgetDetailDialog> Logger
+@inject IJSRuntime JS
+
+@*
+    BudgetDetailDialog — Budget drill-down modal.
+    Opens when a PTD Budget or YTD Budget cell is clicked in the IS report.
+    Queries the BUDGETS table for the clicked account/period/budget type.
+*@
+
+<MudDialog Style="min-width:800px; max-width:98vw;">
+    <TitleContent>
+        <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.AccountBalanceWallet" Color="Color.Primary" />
+            <div>
+                <MudText Typo="Typo.h6">Budget Detail</MudText>
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @DrillDown.DisplayLabel
+                </MudText>
+            </div>
+        </MudStack>
+    </TitleContent>
+
+    <DialogContent>
+        @if (_loading)
+        {
+            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-2" />
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="pa-4 text-center">
+                Loading budget detail...
+            </MudText>
+        }
+        else if (_error != null)
+        {
+            <MudAlert Severity="Severity.Error">@_error</MudAlert>
+        }
+        else if (_rows.Count == 0)
+        {
+            <MudAlert Severity="Severity.Info">
+                No budget entries found for the selected criteria.
+                @if (DrillDown.TotalBudget.HasValue)
+                {
+                    <span> Total: @FormatAmount(DrillDown.TotalBudget.Value)</span>
+                }
+            </MudAlert>
+        }
+        else
+        {
+            <!-- Summary chips -->
+            <MudStack Row="true" Spacing="3" Class="mb-3" AlignItems="AlignItems.Center">
+                <MudChip T="string" Size="Size.Small" Color="Color.Primary"
+                         Icon="@Icons.Material.Filled.AccountBalanceWallet">
+                    @_rows.Count row@(_rows.Count == 1 ? "" : "s")
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Success"
+                         Icon="@Icons.Material.Filled.AttachMoney">
+                    Total: @FormatAmount(_rows.Sum(r => r.Activity))
+                </MudChip>
+                <MudChip T="string" Size="Size.Small" Color="Color.Secondary"
+                         Icon="@Icons.Material.Filled.Label">
+                    Budget Type: @DrillDown.BudgetType
+                </MudChip>
+                <MudSpacer />
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    @FormatPeriod(DrillDown.PeriodFrom) – @FormatPeriod(DrillDown.PeriodTo)
+                </MudText>
+            </MudStack>
+
+            <!-- Budget detail table -->
+            <div class="gl-detail-container">
+                <table class="gl-detail-table">
+                    <thead>
+                        <tr>
+                            <th>Period</th>
+                            @if (DrillDown.EntityIds.Count > 1)
+                            {
+                                <th>Entity</th>
+                            }
+                            @if (DrillDown.AcctNums.Count > 1)
+                            {
+                                <th>Account</th>
+                            }
+                            <th>Dept</th>
+                            <th>Basis</th>
+                            <th>Budget Type</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var row in _rows)
+                        {
+                            <tr class="gl-detail-row">
+                                <td>@FormatPeriod(row.Period)</td>
+                                @if (DrillDown.EntityIds.Count > 1)
+                                {
+                                    <td class="mono">@row.EntityId</td>
+                                }
+                                @if (DrillDown.AcctNums.Count > 1)
+                                {
+                                    <td class="mono">@row.AcctNum.Trim()</td>
+                                }
+                                <td>@row.Department</td>
+                                <td>@row.Basis</td>
+                                <td>@row.BudType</td>
+                                <td class="amount @(row.Activity < 0 ? "negative" : "")">
+                                    @FormatAmount(row.Activity)
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot>
+                        <tr class="gl-detail-total">
+                            <td colspan="@(TotalColspan - 1)">Total Budget</td>
+                            <td class="amount @(_rows.Sum(r => r.Activity) < 0 ? "negative" : "")">
+                                @FormatAmount(_rows.Sum(r => r.Activity))
+                            </td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        }
+    </DialogContent>
+
+    <DialogActions>
+        @if (_rows.Count > 0)
+        {
+            <MudButton OnClick="ExportExcel"
+                       Variant="Variant.Filled"
+                       Color="Color.Success"
+                       StartIcon="@Icons.Material.Filled.GridOn"
+                       Disabled="@_exporting"
+                       Size="Size.Small">
+                @(_exporting ? "Exporting..." : "Excel")
+            </MudButton>
+        }
+        <MudButton OnClick="Close"
+                   Variant="Variant.Filled"
+                   Color="Color.Primary"
+                   Size="Size.Small">
+            Close
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public BudgetDrillDownRef DrillDown { get; set; } = null!;
+
+    private List<BudgetDetailRow> _rows = new();
+    private bool   _loading = true;
+    private bool   _exporting = false;
+    private string? _error;
+
+    private int TotalColspan =>
+        4   // Period, Dept, Basis, BudType, Amount → 5 base cols
+        + (DrillDown.EntityIds.Count > 1 ? 1 : 0)
+        + (DrillDown.AcctNums.Count  > 1 ? 1 : 0);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDetailAsync();
+    }
+
+    private async Task LoadDetailAsync()
+    {
+        _loading = true;
+        _error   = null;
+
+        try
+        {
+            var rows = await BudgetDetailRepository.GetDetailAsync(
+                UserSession.DbKey, DrillDown);
+            _rows = rows.ToList();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load budget detail: {ex.Message}";
+            Logger.LogError(ex, "BudgetDetailDialog load failed");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static string FormatPeriod(string period) =>
+        period.Length == 6
+            ? $"{period[4..6]}/{period[0..4]}"
+            : period;
+
+    private static string FormatAmount(decimal amt) => amt.ToString("N2");
+
+    private void Close() => MudDialog.Close();
+
+    private bool _exporting2 = false;
+
+    private async Task ExportExcel()
+    {
+        _exporting = true;
+        try
+        {
+            var bytes    = BuildExcel();
+            var fileName = $"BudgetDetail_{DrillDown.BudgetType}_{DrillDown.PeriodFrom}-{DrillDown.PeriodTo}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            var base64   = Convert.ToBase64String(bytes);
+            await JS.InvokeVoidAsync("downloadFile", fileName,
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "BudgetDetailDialog Excel export failed");
+            AlertSvc.AddError("Excel export failed.");
+        }
+        finally
+        {
+            _exporting = false;
+        }
+    }
+
+    private byte[] BuildExcel()
+    {
+        using var wb = new ClosedXML.Excel.XLWorkbook();
+        var ws = wb.Worksheets.Add("Budget Detail");
+
+        // Title
+        ws.Cell(1, 1).Value = $"Budget Detail — {DrillDown.DisplayLabel}";
+        ws.Cell(1, 1).Style.Font.Bold = true;
+        ws.Cell(1, 1).Style.Font.FontSize = 12;
+        ws.Cell(2, 1).Value = $"Budget Type: {DrillDown.BudgetType}   Period: {DrillDown.PeriodFrom} – {DrillDown.PeriodTo}   Entities: {string.Join(", ", DrillDown.EntityIds)}";
+        ws.Cell(2, 1).Style.Font.FontSize = 9;
+        ws.Cell(2, 1).Style.Font.FontColor = ClosedXML.Excel.XLColor.Gray;
+
+        // Headers
+        var headers = new[] { "Period", "Entity", "Account", "Dept", "Basis", "Budget Type", "Amount" };
+        for (int i = 0; i < headers.Length; i++)
+        {
+            var h = ws.Cell(4, i + 1);
+            h.Value = headers[i];
+            h.Style.Font.Bold = true;
+            h.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#D9E1F2");
+            h.Style.Border.BottomBorder  = ClosedXML.Excel.XLBorderStyleValues.Medium;
+        }
+
+        // Data rows
+        int row = 5;
+        foreach (var r in _rows)
+        {
+            ws.Cell(row, 1).Value = FormatPeriod(r.Period);
+            ws.Cell(row, 2).Value = r.EntityId;
+            ws.Cell(row, 3).Value = r.AcctNum.Trim();
+            ws.Cell(row, 4).Value = r.Department;
+            ws.Cell(row, 5).Value = r.Basis;
+            ws.Cell(row, 6).Value = r.BudType;
+
+            var amt = ws.Cell(row, 7);
+            amt.Value = (double)r.Activity;
+            amt.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+            amt.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+            row++;
+        }
+
+        // Total row
+        ws.Cell(row, 6).Value = "Total";
+        ws.Cell(row, 6).Style.Font.Bold = true;
+        var total = ws.Cell(row, 7);
+        total.Value = (double)_rows.Sum(r => r.Activity);
+        total.Style.Font.Bold = true;
+        total.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+        total.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+        total.Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
+
+        ws.Columns(1, 7).AdjustToContents();
+        ws.Column(7).Width = 16;
+        ws.SheetView.Freeze(4, 0);
+
+        using var ms = new System.IO.MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
+    }
+}

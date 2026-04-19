@@ -42,8 +42,17 @@ public readonly record struct CellValue
     /// </summary>
     public string? CssClass { get; init; }
 
-    /// <summary>True when this cell supports drill-down to GL detail.</summary>
+    /// <summary>
+    /// Budget drill-down context. Set on PTD/YTD Budget cells in IS report.
+    /// Opens BudgetDetailDialog instead of GLDetailDialog.
+    /// </summary>
+    public BudgetDrillDownRef? BudgetDrillDown { get; init; }
+
+    /// <summary>True when this cell supports GL drill-down.</summary>
     public bool IsDrillable => DrillDown is not null;
+
+    /// <summary>True when this cell supports budget drill-down.</summary>
+    public bool IsBudgetDrillable => BudgetDrillDown is not null;
 
     /// <summary>Creates a drillable cell with both amount and drill-down context.</summary>
     public CellValue(decimal? amount, DrillDownRef drillDown)
