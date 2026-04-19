@@ -5,6 +5,7 @@ using BCPFinAnalytics.Common.Interfaces;
 using BCPFinAnalytics.Common.Models;
 using BCPFinAnalytics.Common.Models.Format;
 using BCPFinAnalytics.Common.Wrappers;
+using BCPFinAnalytics.DAL.Interfaces;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Interfaces;
@@ -29,7 +30,8 @@ public class Forecast12Strategy : IReportStrategy
 {
     private readonly IFormatLoader _formatLoader;
     private readonly GlFilterBuilder _glFilterBuilder;
-    private readonly IForecast12Repository _repository;
+    private readonly IGlDataRepository _glData;
+    private readonly IBudgetDataRepository _budgetData;
     private readonly ILookupService _lookupService;
     private readonly ILogger<Forecast12Strategy> _logger;
 
@@ -47,13 +49,15 @@ public class Forecast12Strategy : IReportStrategy
     public Forecast12Strategy(
         IFormatLoader formatLoader,
         GlFilterBuilder glFilterBuilder,
-        IForecast12Repository repository,
+        IGlDataRepository glData,
+        IBudgetDataRepository budgetData,
         ILookupService lookupService,
         ILogger<Forecast12Strategy> logger)
     {
         _formatLoader    = formatLoader;
         _glFilterBuilder = glFilterBuilder;
-        _repository      = repository;
+        _glData          = glData;
+        _budgetData      = budgetData;
         _lookupService   = lookupService;
         _logger          = logger;
     }
@@ -140,20 +144,58 @@ public class Forecast12Strategy : IReportStrategy
                 string.Join(",", actualPeriods),
                 string.Join(",", budgetPeriods));
 
-            // ── Fetch actual and budget data in parallel ───────────────────
-            var tActual = actualPeriods.Any()
-                ? _repository.GetActualAsync(options.DbKey, glParams, actualPeriods)
-                : Task.FromResult(Enumerable.Empty<Forecast12RawRow>());
+            // ── Fetch actuals and budgets in parallel via primitives ───────
+            // actualPeriods: GetGlActivity per period (BALFOR='N' inside)
+            // budgetPeriods: GetBudgetAmount per period (basis-filtered inside)
+            // Either list may be empty (first or last month of fiscal year).
+            // All tasks flattened into one Task.WhenAll so they run concurrently.
+            var actualTasks = actualPeriods
+                .Select(p => _glData.GetGlActivityAsync(
+                    options.DbKey, p, p,
+                    glParams.LedgLo, glParams.LedgHi,
+                    glParams.EntityIds, glParams.BasisList))
+                .ToList();
 
-            var tBudget = budgetPeriods.Any()
-                ? _repository.GetBudgetAsync(options.DbKey, glParams, budgetPeriods, options.Budget)
-                : Task.FromResult(Enumerable.Empty<Forecast12RawRow>());
+            var budgetTasks = budgetPeriods
+                .Select(p => _budgetData.GetBudgetAmountAsync(
+                    options.DbKey, p, p, options.Budget,
+                    glParams.LedgLo, glParams.LedgHi,
+                    glParams.EntityIds, glParams.BasisList))
+                .ToList();
 
-            await Task.WhenAll(tActual, tBudget);
+            await Task.WhenAll(actualTasks.Concat(budgetTasks));
 
-            // ── Aggregate and merge into unified pivot ─────────────────────
-            var combined = MergeAndPivot(
-                tActual.Result, tBudget.Result, allPeriods);
+            var actualResults = actualTasks.Select(t => t.Result).ToList();
+            var budgetResults = budgetTasks.Select(t => t.Result).ToList();
+
+            // ── Merge into unified pivot ───────────────────────────────────
+            // Both result lists parallel their period lists: results[i]
+            // corresponds to periods[i]. Merge pushes each period's data
+            // into combined[acct].Monthly[period].
+            var combined = new Dictionary<string, AcctAggregate>();
+
+            void MergeInto(
+                IReadOnlyList<string> periods,
+                IReadOnlyList<IReadOnlyDictionary<string, AccountAmount>> results)
+            {
+                for (var i = 0; i < periods.Count; i++)
+                {
+                    var period = periods[i];
+                    foreach (var (acct, data) in results[i])
+                    {
+                        if (!combined.TryGetValue(acct, out var agg))
+                        {
+                            agg = new AcctAggregate(
+                                data.AcctName, data.Type, NewMonthlyDict(allPeriods));
+                            combined[acct] = agg;
+                        }
+                        agg.Monthly[period] = data.Amount;
+                    }
+                }
+            }
+
+            MergeInto(actualPeriods, actualResults);
+            MergeInto(budgetPeriods, budgetResults);
 
             _logger.LogInformation(
                 "Forecast12Strategy — {Count} accounts after merge", combined.Count);
@@ -334,32 +376,6 @@ public class Forecast12Strategy : IReportStrategy
     // ══════════════════════════════════════════════════════════════
     //  Aggregation
     // ══════════════════════════════════════════════════════════════
-
-    private static Dictionary<string, AcctAggregate> MergeAndPivot(
-        IEnumerable<Forecast12RawRow> actualRows,
-        IEnumerable<Forecast12RawRow> budgetRows,
-        IReadOnlyList<string> allPeriods)
-    {
-        var dict = new Dictionary<string, AcctAggregate>();
-
-        void AddRows(IEnumerable<Forecast12RawRow> rows)
-        {
-            foreach (var row in rows)
-            {
-                if (!dict.TryGetValue(row.AcctNum, out var agg))
-                {
-                    agg = new AcctAggregate(row.AcctName, row.Type, NewMonthlyDict(allPeriods));
-                    dict[row.AcctNum] = agg;
-                }
-                if (agg.Monthly.ContainsKey(row.Period))
-                    agg.Monthly[row.Period] += row.Amount;
-            }
-        }
-
-        AddRows(actualRows);
-        AddRows(budgetRows);
-        return dict;
-    }
 
     private static Dictionary<string, decimal> NewMonthlyDict(
         IReadOnlyList<string> periods) =>
