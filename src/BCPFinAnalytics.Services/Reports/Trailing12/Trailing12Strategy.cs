@@ -5,6 +5,7 @@ using BCPFinAnalytics.Common.Interfaces;
 using BCPFinAnalytics.Common.Models;
 using BCPFinAnalytics.Common.Models.Format;
 using BCPFinAnalytics.Common.Wrappers;
+using BCPFinAnalytics.DAL.Interfaces;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Interfaces;
@@ -19,7 +20,7 @@ namespace BCPFinAnalytics.Services.Reports.Trailing12;
 ///   Account # | Description | Month-0 | Month-1 | ... | Month-11
 ///   where Month-0 = EndPeriod, Month-1 = EndPeriod-1, ..., Month-11 = EndPeriod-11
 ///
-/// ONE query fetches all 12 periods (PERIOD IN @Periods, BALFOR='N').
+/// 12 parallel GetGlActivity calls (one per month) via Task.WhenAll.
 /// Strategy pivots results by period into a dictionary keyed by ACCTNUM.
 ///
 /// SIGN CONVENTION: same as IS report.
@@ -33,7 +34,7 @@ public class Trailing12Strategy : IReportStrategy
 {
     private readonly IFormatLoader _formatLoader;
     private readonly GlFilterBuilder _glFilterBuilder;
-    private readonly ITrailing12Repository _repository;
+    private readonly IGlDataRepository _glData;
     private readonly ILookupService _lookupService;
     private readonly ILogger<Trailing12Strategy> _logger;
 
@@ -53,13 +54,13 @@ public class Trailing12Strategy : IReportStrategy
     public Trailing12Strategy(
         IFormatLoader formatLoader,
         GlFilterBuilder glFilterBuilder,
-        ITrailing12Repository repository,
+        IGlDataRepository glData,
         ILookupService lookupService,
         ILogger<Trailing12Strategy> logger)
     {
         _formatLoader    = formatLoader;
         _glFilterBuilder = glFilterBuilder;
-        _repository      = repository;
+        _glData          = glData;
         _lookupService   = lookupService;
         _logger          = logger;
     }
@@ -126,15 +127,42 @@ public class Trailing12Strategy : IReportStrategy
                 "Trailing12Strategy — EndPeriod={End} Periods=[{Periods}]",
                 endPeriod, string.Join(",", periods));
 
-            // ── Step 6: Fetch all 12 months in one query ───────────────────
-            var rawRows = await _repository.GetActivityAsync(
-                options.DbKey, glParams, periods);
+            // ── Step 6: Fetch 12 months in parallel via GL primitive ──────
+            // Each call returns one summed row per account for that single
+            // period. Task.WhenAll fires them simultaneously; the primitive
+            // handles BALFOR filtering and per-account aggregation.
+            _logger.LogInformation(
+                "Trailing12Strategy — Fetching {Count} months in parallel", periods.Count);
 
-            // ── Step 7: Aggregate across entities, pivot by period ─────────
-            var combined = AggregateAndPivot(rawRows, periods);
+            var tasks = periods
+                .Select(p => _glData.GetGlActivityAsync(
+                    options.DbKey, p, p,
+                    glParams.LedgLo, glParams.LedgHi,
+                    glParams.EntityIds, glParams.BasisList))
+                .ToList();
+
+            var results = await Task.WhenAll(tasks);
+
+            // results[i] corresponds to periods[i]. Build per-account pivot.
+            var combined = new Dictionary<string, AcctAggregate>();
+            for (var i = 0; i < periods.Count; i++)
+            {
+                var period = periods[i];
+                var monthData = results[i];
+                foreach (var (acct, data) in monthData)
+                {
+                    if (!combined.TryGetValue(acct, out var agg))
+                    {
+                        agg = new AcctAggregate(
+                            data.AcctName, data.Type, NewMonthlyDict(periods));
+                        combined[acct] = agg;
+                    }
+                    agg.Monthly[period] = data.Amount;
+                }
+            }
 
             _logger.LogInformation(
-                "Trailing12Strategy — {Count} accounts after pivot", combined.Count);
+                "Trailing12Strategy — {Count} accounts after merge", combined.Count);
 
             // ── Step 8: Walk format rows ───────────────────────────────────
             var reportRows   = new List<ReportRow>();
@@ -298,28 +326,6 @@ public class Trailing12Strategy : IReportStrategy
     // ══════════════════════════════════════════════════════════════
     //  Aggregation + pivot
     // ══════════════════════════════════════════════════════════════
-
-    private static Dictionary<string, AcctAggregate> AggregateAndPivot(
-        IEnumerable<Trailing12RawRow> rows,
-        IReadOnlyList<string> periods)
-    {
-        var dict = new Dictionary<string, AcctAggregate>();
-
-        foreach (var row in rows)
-        {
-            if (!dict.TryGetValue(row.AcctNum, out var agg))
-            {
-                agg = new AcctAggregate(
-                    row.AcctName, row.Type, NewMonthlyDict(periods));
-                dict[row.AcctNum] = agg;
-            }
-
-            if (agg.Monthly.ContainsKey(row.Period))
-                agg.Monthly[row.Period] += row.Amount;
-        }
-
-        return dict;
-    }
 
     private static Dictionary<string, decimal> NewMonthlyDict(
         IReadOnlyList<string> periods) =>

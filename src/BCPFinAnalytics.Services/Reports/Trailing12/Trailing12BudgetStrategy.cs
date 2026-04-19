@@ -5,6 +5,7 @@ using BCPFinAnalytics.Common.Interfaces;
 using BCPFinAnalytics.Common.Models;
 using BCPFinAnalytics.Common.Models.Format;
 using BCPFinAnalytics.Common.Wrappers;
+using BCPFinAnalytics.DAL.Interfaces;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Interfaces;
@@ -28,7 +29,7 @@ public class Trailing12BudgetStrategy : IReportStrategy
 {
     private readonly IFormatLoader _formatLoader;
     private readonly GlFilterBuilder _glFilterBuilder;
-    private readonly ITrailing12Repository _repository;
+    private readonly IBudgetDataRepository _budgetData;
     private readonly ILookupService _lookupService;
     private readonly ILogger<Trailing12BudgetStrategy> _logger;
 
@@ -46,13 +47,13 @@ public class Trailing12BudgetStrategy : IReportStrategy
     public Trailing12BudgetStrategy(
         IFormatLoader formatLoader,
         GlFilterBuilder glFilterBuilder,
-        ITrailing12Repository repository,
+        IBudgetDataRepository budgetData,
         ILookupService lookupService,
         ILogger<Trailing12BudgetStrategy> logger)
     {
         _formatLoader    = formatLoader;
         _glFilterBuilder = glFilterBuilder;
-        _repository      = repository;
+        _budgetData      = budgetData;
         _lookupService   = lookupService;
         _logger          = logger;
     }
@@ -66,7 +67,7 @@ public class Trailing12BudgetStrategy : IReportStrategy
         BudgetEnabled          = true,    // ← required for T12BUD
         SFTypeEnabled          = false,
         FormatEnabled          = true,
-        BasisEnabled           = false,   // ← no basis for budget
+        BasisEnabled           = true,    // ← budget now filters by basis (matches IS/FC12 convention)
         EntitySelectionEnabled = true,
         WholeDollarsEnabled    = true,
         IsCrosstab             = false
@@ -124,15 +125,42 @@ public class Trailing12BudgetStrategy : IReportStrategy
                 "Trailing12BudgetStrategy — EndPeriod={End} Budget={Budget} Periods=[{Periods}]",
                 endPeriod, options.Budget, string.Join(",", periods));
 
-            // ── Fetch budget data from BUDGETS table ───────────────────────
-            var rawRows = await _repository.GetBudgetAsync(
-                options.DbKey, glParams, periods, options.Budget);
+            // ── Fetch 12 months of budget data in parallel ─────────────────
+            // Each call returns one summed row per account for that single
+            // period + budget type. Task.WhenAll fires them simultaneously;
+            // the primitive handles basis expansion and per-account aggregation.
+            _logger.LogInformation(
+                "Trailing12BudgetStrategy — Fetching {Count} months in parallel", periods.Count);
 
-            // ── Aggregate and pivot ────────────────────────────────────────
-            var combined = AggregateAndPivot(rawRows, periods);
+            var tasks = periods
+                .Select(p => _budgetData.GetBudgetAmountAsync(
+                    options.DbKey, p, p, options.Budget,
+                    glParams.LedgLo, glParams.LedgHi,
+                    glParams.EntityIds, glParams.BasisList))
+                .ToList();
+
+            var results = await Task.WhenAll(tasks);
+
+            // results[i] corresponds to periods[i]. Build per-account pivot.
+            var combined = new Dictionary<string, AcctAggregate>();
+            for (var i = 0; i < periods.Count; i++)
+            {
+                var period = periods[i];
+                var monthData = results[i];
+                foreach (var (acct, data) in monthData)
+                {
+                    if (!combined.TryGetValue(acct, out var agg))
+                    {
+                        agg = new AcctAggregate(
+                            data.AcctName, data.Type, NewMonthlyDict(periods));
+                        combined[acct] = agg;
+                    }
+                    agg.Monthly[period] = data.Amount;
+                }
+            }
 
             _logger.LogInformation(
-                "Trailing12BudgetStrategy — {Count} accounts after pivot", combined.Count);
+                "Trailing12BudgetStrategy — {Count} accounts after merge", combined.Count);
 
             // ── Walk format rows ───────────────────────────────────────────
             var reportRows   = new List<ReportRow>();
@@ -291,24 +319,6 @@ public class Trailing12BudgetStrategy : IReportStrategy
             current = FiscalCalendar.PreviousPeriod(current);
         }
         return periods;
-    }
-
-    private static Dictionary<string, AcctAggregate> AggregateAndPivot(
-        IEnumerable<Trailing12RawRow> rows,
-        IReadOnlyList<string> periods)
-    {
-        var dict = new Dictionary<string, AcctAggregate>();
-        foreach (var row in rows)
-        {
-            if (!dict.TryGetValue(row.AcctNum, out var agg))
-            {
-                agg = new AcctAggregate(row.AcctName, row.Type, NewMonthlyDict(periods));
-                dict[row.AcctNum] = agg;
-            }
-            if (agg.Monthly.ContainsKey(row.Period))
-                agg.Monthly[row.Period] += row.Amount;
-        }
-        return dict;
     }
 
     private static Dictionary<string, decimal> NewMonthlyDict(
