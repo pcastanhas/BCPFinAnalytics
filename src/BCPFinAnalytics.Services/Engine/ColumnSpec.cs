@@ -43,6 +43,16 @@ public sealed record DrillContext
     public required IReadOnlyList<string> EntityIds { get; init; }
     public required IReadOnlyList<string> BasisList { get; init; }
     public required string DisplayLabel           { get; init; }
+
+    /// <summary>
+    /// Account type lookup (<c>AcctNum → Type</c>) for accounts that appear
+    /// in <see cref="AcctNums"/>. Used by drill factories that need to
+    /// branch on account type — e.g. Simple TB uses a different
+    /// <c>PeriodFrom</c> for Balance-Sheet accounts (B/C) vs Income accounts.
+    /// Populated for Detail and Summary rows; empty for aggregate rows.
+    /// </summary>
+    public IReadOnlyDictionary<string, string> AcctTypes { get; init; }
+        = new Dictionary<string, string>();
 }
 
 /// <summary>

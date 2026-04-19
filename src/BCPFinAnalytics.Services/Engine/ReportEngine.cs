@@ -195,7 +195,7 @@ public class ReportEngine : IReportEngine
                     case FormatRowType.Summary:
                         grpAcc = NewAccumulator(columns);
                         var smRow = BuildSummaryRow(
-                            fmtRow, columns, perAcct, glParams,
+                            fmtRow, columns, perAcct, acctMetadata, glParams,
                             options.WholeDollars, grpAcc);
                         if (smRow is not null)
                             reportRows.Add(smRow);
@@ -418,7 +418,7 @@ public class ReportEngine : IReportEngine
             // Per-row accumulator used for derived-column evaluation of this row
             var rowAcc = ApplySignToAccumulator(raw, fmtRow);
 
-            var (acctName, _) = meta.TryGetValue(acctNum, out var m) ? m : ("", "");
+            var (acctName, acctType) = meta.TryGetValue(acctNum, out var m) ? m : ("", "");
             var formattedAcct = AccountNumberFormatter.Format(
                 acctNum, glInfo.AcctLgt, glInfo.AcctDsp);
             var displayLabel = $"{formattedAcct} · {acctName}";
@@ -428,7 +428,8 @@ public class ReportEngine : IReportEngine
                 AcctNums     = new[] { acctNum },
                 EntityIds    = glParams.EntityIds,
                 BasisList    = glParams.BasisList,
-                DisplayLabel = displayLabel
+                DisplayLabel = displayLabel,
+                AcctTypes    = new Dictionary<string, string> { [acctNum] = acctType }
             };
 
             rows.Add(new ReportRow
@@ -452,6 +453,7 @@ public class ReportEngine : IReportEngine
         FormatRow fmtRow,
         IReadOnlyList<ColumnSpec> columns,
         IReadOnlyDictionary<string, Dictionary<string, decimal>> perAcct,
+        IReadOnlyDictionary<string, (string AcctName, string Type)> meta,
         GlQueryParameters glParams,
         bool wholeDollars,
         Dictionary<string, decimal> grpAcc)
@@ -476,12 +478,17 @@ public class ReportEngine : IReportEngine
 
         var signed = ApplySignToAccumulator(rawSummed, fmtRow);
 
+        var acctTypes = matching.ToDictionary(
+            a => a,
+            a => meta.TryGetValue(a, out var m) ? m.Type : string.Empty);
+
         var drillContext = new DrillContext
         {
             AcctNums     = matching,
             EntityIds    = glParams.EntityIds,
             BasisList    = glParams.BasisList,
-            DisplayLabel = matching.Count == 1 ? fmtRow.Label : $"{fmtRow.Label} ({matching.Count} accounts)"
+            DisplayLabel = matching.Count == 1 ? fmtRow.Label : $"{fmtRow.Label} ({matching.Count} accounts)",
+            AcctTypes    = acctTypes
         };
 
         return new ReportRow
