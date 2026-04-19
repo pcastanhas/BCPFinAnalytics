@@ -489,7 +489,6 @@ public class IncomeStatementStrategy : IReportStrategy
                 PeriodFrom   = startPeriod,
                 PeriodTo     = glParams.EndPeriod,
                 BudgetType   = budgetType,
-                TotalBudget  = sPtdB,
                 DisplayLabel = $"{formattedAcct} · {data.AcctName} (PTD Budget)"
             };
             var ytdBudDrill = new BudgetDrillDownRef
@@ -499,7 +498,6 @@ public class IncomeStatementStrategy : IReportStrategy
                 PeriodFrom   = glParams.BegYrPd,
                 PeriodTo     = glParams.EndPeriod,
                 BudgetType   = budgetType,
-                TotalBudget  = sYtdB,
                 DisplayLabel = $"{formattedAcct} · {data.AcctName} (YTD Budget)"
             };
             cells[ColPtdBudget] = cells[ColPtdBudget] with { BudgetDrillDown = ptdBudDrill };

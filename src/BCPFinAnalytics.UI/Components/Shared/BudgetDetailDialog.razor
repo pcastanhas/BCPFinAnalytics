@@ -44,10 +44,6 @@
         {
             <MudAlert Severity="Severity.Info">
                 No budget entries found for the selected criteria.
-                @if (DrillDown.TotalBudget.HasValue)
-                {
-                    <span> Total: @FormatAmount(DrillDown.TotalBudget.Value)</span>
-                }
             </MudAlert>
         }
         else

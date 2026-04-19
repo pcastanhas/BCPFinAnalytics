@@ -493,7 +493,6 @@ public class Forecast12Strategy : IReportStrategy
                         PeriodFrom   = period,
                         PeriodTo     = period,
                         BudgetType   = budgetType,
-                        TotalBudget  = amount,
                         DisplayLabel = $"{FiscalCalendar.ToDisplayPeriod(period)} · Budget"
                     };
                     cells[colId] = new CellValue(amount) { BudgetDrillDown = budDrill };

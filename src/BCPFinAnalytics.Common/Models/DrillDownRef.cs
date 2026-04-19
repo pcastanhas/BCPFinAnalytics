@@ -68,8 +68,11 @@ public sealed record DrillDownRef
 
 /// <summary>
 /// Identifies the budget data behind a drillable budget cell.
-/// Passed to the Budget Detail modal when the user clicks a PTD/YTD Budget cell.
-/// Queries the BUDGETS table (not JOURNAL/GHIS).
+/// Passed to <see cref="BudgetDetailDialog"/> (in the UI layer) when the user
+/// clicks a PTD/YTD Budget cell. The dialog fetches its own budget rows from
+/// the BUDGETS table and computes the total locally — this record only
+/// describes WHICH budget rows to pull (entity + account + period + budget-
+/// type filters).
 /// </summary>
 public sealed record BudgetDrillDownRef
 {
@@ -78,6 +81,5 @@ public sealed record BudgetDrillDownRef
     public string PeriodFrom    { get; init; } = string.Empty;
     public string PeriodTo      { get; init; } = string.Empty;
     public string BudgetType    { get; init; } = string.Empty;
-    public decimal? TotalBudget { get; init; } = null;
     public string DisplayLabel  { get; init; } = string.Empty;
 }
