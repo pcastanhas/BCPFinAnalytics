@@ -10,21 +10,21 @@ namespace BCPFinAnalytics.DAL.Repositories;
 /// Retrieves budget detail rows from the BUDGETS table.
 /// Returns one row per ACCTNUM + ENTITYID + DEPARTMENT + BASIS + BUDTYPE + PERIOD.
 /// </summary>
-public class BudgetDetailRepository : IBudgetDetailRepository
+public class BudgetDrillDownRepository : IBudgetDrillDownRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
-    private readonly ILogger<BudgetDetailRepository> _logger;
+    private readonly ILogger<BudgetDrillDownRepository> _logger;
 
-    public BudgetDetailRepository(
+    public BudgetDrillDownRepository(
         IDbConnectionFactory connectionFactory,
-        ILogger<BudgetDetailRepository> logger)
+        ILogger<BudgetDrillDownRepository> logger)
     {
         _connectionFactory = connectionFactory;
         _logger            = logger;
     }
 
     /// <inheritdoc />
-    public async Task<IEnumerable<BudgetDetailRow>> GetDetailAsync(
+    public async Task<IEnumerable<BudgetDetailRow>> GetTransactionsAsync(
         string dbKey,
         BudgetDrillDownRef drillDown)
     {
@@ -57,7 +57,7 @@ public class BudgetDetailRepository : IBudgetDetailRepository
         try
         {
             _logger.LogTrace(
-                "BudgetDetailRepository.GetDetailAsync — DbKey={DbKey} " +
+                "BudgetDrillDownRepository.GetTransactionsAsync — DbKey={DbKey} " +
                 "Entities=[{Entities}] AcctNums=[{AcctNums}] " +
                 "BudgetType={BudType} Period={From}-{To}",
                 dbKey,
@@ -71,7 +71,7 @@ public class BudgetDetailRepository : IBudgetDetailRepository
             var result = rows.ToList();
 
             _logger.LogDebug(
-                "BudgetDetailRepository.GetDetailAsync — {Count} rows DbKey={DbKey}",
+                "BudgetDrillDownRepository.GetTransactionsAsync — {Count} rows DbKey={DbKey}",
                 result.Count, dbKey);
 
             return result;
@@ -79,7 +79,7 @@ public class BudgetDetailRepository : IBudgetDetailRepository
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "BudgetDetailRepository.GetDetailAsync failed — DbKey={DbKey}", dbKey);
+                "BudgetDrillDownRepository.GetTransactionsAsync failed — DbKey={DbKey}", dbKey);
             throw;
         }
     }

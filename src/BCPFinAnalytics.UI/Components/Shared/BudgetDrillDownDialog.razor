@@ -1,16 +1,16 @@
 @using BCPFinAnalytics.Common.DTOs
 @using BCPFinAnalytics.Common.Models
-@using BCPFinAnalytics.DAL.Interfaces
+@using BCPFinAnalytics.Services.BudgetDetail
 @using BCPFinAnalytics.Services.Session
-@inject IBudgetDetailRepository BudgetDetailRepository
+@inject IBudgetDrillDownService BudgetDrillDownService
 @inject UserSessionService UserSession
 @inject ISnackbar Snackbar
 @inject BCPFinAnalytics.UI.Services.AlertService AlertSvc
-@inject ILogger<BudgetDetailDialog> Logger
+@inject ILogger<BudgetDrillDownDialog> Logger
 @inject IJSRuntime JS
 
 @*
-    BudgetDetailDialog — Budget drill-down modal.
+    BudgetDrillDownDialog — Budget drill-down modal.
     Opens when a PTD Budget or YTD Budget cell is clicked in the IS report.
     Queries the BUDGETS table for the clicked account/period/budget type.
 *@
@@ -168,21 +168,35 @@
         _loading = true;
         _error   = null;
 
-        try
+        Logger.LogInformation(
+            "BudgetDrillDownDialog loading — DbKey={DbKey} Label={Label} " +
+            "Entities=[{Entities}] AcctNums=[{AcctNums}] Period={From}-{To} BudgetType={Type}",
+            UserSession.DbKey,
+            DrillDown.DisplayLabel,
+            string.Join(",", DrillDown.EntityIds),
+            string.Join(",", DrillDown.AcctNums),
+            DrillDown.PeriodFrom,
+            DrillDown.PeriodTo,
+            DrillDown.BudgetType);
+
+        var result = await BudgetDrillDownService.GetTransactionsAsync(
+            UserSession.DbKey, DrillDown);
+
+        if (result.IsSuccess)
         {
-            var rows = await BudgetDetailRepository.GetDetailAsync(
-                UserSession.DbKey, DrillDown);
-            _rows = rows.ToList();
+            _rows = result.Data!.ToList();
+            Logger.LogInformation(
+                "BudgetDrillDownDialog loaded {Count} rows — Label={Label}",
+                _rows.Count, DrillDown.DisplayLabel);
         }
-        catch (Exception ex)
+        else
         {
-            _error = $"Failed to load budget detail: {ex.Message}";
-            Logger.LogError(ex, "BudgetDetailDialog load failed");
+            _error = $"Failed to load budget detail: {result.ErrorMessage}";
+            Logger.LogError(
+                "BudgetDrillDownDialog load failed — {Error}", result.ErrorMessage);
         }
-        finally
-        {
-            _loading = false;
-        }
+
+        _loading = false;
     }
 
     private static string FormatPeriod(string period) =>
@@ -202,14 +216,14 @@
         try
         {
             var bytes    = BuildExcel();
-            var fileName = $"BudgetDetail_{DrillDown.BudgetType}_{DrillDown.PeriodFrom}-{DrillDown.PeriodTo}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
+            var fileName = $"BudgetDrillDown_{DrillDown.BudgetType}_{DrillDown.PeriodFrom}-{DrillDown.PeriodTo}_{DateTime.Now:yyyyMMddHHmmss}.xlsx";
             var base64   = Convert.ToBase64String(bytes);
             await JS.InvokeVoidAsync("downloadFile", fileName,
                 "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", base64);
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "BudgetDetailDialog Excel export failed");
+            Logger.LogError(ex, "BudgetDrillDownDialog Excel export failed");
             AlertSvc.AddError("Excel export failed.");
         }
         finally

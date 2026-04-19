@@ -22,7 +22,7 @@ namespace BCPFinAnalytics.Services.Reports.Trailing12;
 ///   Account # | Description | Month-0 Budget | Month-1 Budget | ... | Month-11 Budget
 ///   where Month-0 = EndPeriod, Month-1 = EndPeriod-1, ..., Month-11 = EndPeriod-11
 ///
-/// Budget drill-down on each cell opens BudgetDetailDialog.
+/// Budget drill-down on each cell opens BudgetDrillDownDialog.
 /// </summary>
 public class Trailing12BudgetStrategy : IReportStrategy
 {

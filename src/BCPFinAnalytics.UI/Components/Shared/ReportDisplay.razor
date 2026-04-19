@@ -164,7 +164,7 @@
     {
         var parameters = new DialogParameters
         {
-            { nameof(BudgetDetailDialog.DrillDown), drillDown }
+            { nameof(BudgetDrillDownDialog.DrillDown), drillDown }
         };
 
         var options = new DialogOptions
@@ -175,7 +175,7 @@
             CloseButton       = true
         };
 
-        await DialogService.ShowAsync<BudgetDetailDialog>(
+        await DialogService.ShowAsync<BudgetDrillDownDialog>(
             "Budget Detail", parameters, options);
     }
 

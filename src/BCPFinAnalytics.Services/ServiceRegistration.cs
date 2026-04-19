@@ -9,6 +9,7 @@ using BCPFinAnalytics.Services.Report;
 using BCPFinAnalytics.Services.Session;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.GlDetail;
+using BCPFinAnalytics.Services.BudgetDetail;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Reports.TrialBalance;
 using BCPFinAnalytics.Services.Reports.TrialBalanceDC;
@@ -44,7 +45,7 @@ public static class ServiceRegistration
         services.AddScoped<IUnpostedRERepository, UnpostedRERepository>();
         services.AddScoped<IGlDrillDownRepository, GlDrillDownRepository>();
         services.AddScoped<IStartingBalanceRepository, StartingBalanceRepository>();
-        services.AddScoped<IBudgetDetailRepository, BudgetDetailRepository>();
+        services.AddScoped<IBudgetDrillDownRepository, BudgetDrillDownRepository>();
 
         // ──────────────────────────────────────────────
         //  Session (Scoped — one per Blazor circuit)
@@ -80,6 +81,7 @@ public static class ServiceRegistration
         services.AddScoped<IReportStrategy, Forecast12Strategy>();
         services.AddScoped<IGlDrillDownService, GlDrillDownService>();
         services.AddScoped<IStartingBalanceService, StartingBalanceService>();
+        services.AddScoped<IBudgetDrillDownService, BudgetDrillDownService>();
 
         // ──────────────────────────────────────────────
         //  Renderers (Scoped — stateless but scoped for logging context)

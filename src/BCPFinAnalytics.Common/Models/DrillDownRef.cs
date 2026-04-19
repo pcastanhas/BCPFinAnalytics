@@ -68,7 +68,7 @@ public sealed record DrillDownRef
 
 /// <summary>
 /// Identifies the budget data behind a drillable budget cell.
-/// Passed to <see cref="BudgetDetailDialog"/> (in the UI layer) when the user
+/// Passed to <see cref="BudgetDrillDownDialog"/> (in the UI layer) when the user
 /// clicks a PTD/YTD Budget cell. The dialog fetches its own budget rows from
 /// the BUDGETS table and computes the total locally — this record only
 /// describes WHICH budget rows to pull (entity + account + period + budget-

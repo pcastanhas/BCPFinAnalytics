@@ -7,9 +7,9 @@ namespace BCPFinAnalytics.DAL.Interfaces;
 /// Retrieves budget detail rows from the BUDGETS table for the drill-down modal.
 /// One row per ACCTNUM + ENTITYID + DEPARTMENT + BASIS + BUDTYPE + PERIOD combination.
 /// </summary>
-public interface IBudgetDetailRepository
+public interface IBudgetDrillDownRepository
 {
-    Task<IEnumerable<BudgetDetailRow>> GetDetailAsync(
+    Task<IEnumerable<BudgetDetailRow>> GetTransactionsAsync(
         string dbKey,
         BudgetDrillDownRef drillDown);
 }
