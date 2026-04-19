@@ -452,6 +452,13 @@ html, body {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    transition: flex-basis 0.2s ease, width 0.2s ease;
+}
+
+.report-sidebar-collapsed {
+    flex: 0 0 40px;
+    width: 40px;
+    overflow: hidden;
 }
 
 .report-content {
@@ -477,6 +484,12 @@ html, body {
     display: flex;
     justify-content: flex-end;
     padding: 0 4px 4px 4px;
+}
+
+/* When collapsed, center the single chevron in the narrow strip */
+.report-sidebar-collapsed .sidebar-toggle-bar {
+    justify-content: center;
+    padding: 0;
 }
 
 /* Tighten up the options panel inside the sidebar */

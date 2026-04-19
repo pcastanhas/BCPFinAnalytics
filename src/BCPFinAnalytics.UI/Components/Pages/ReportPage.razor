@@ -21,24 +21,36 @@
 <div class="report-page-layout @(_sidebarOnRight ? "sidebar-right" : "sidebar-left")">
 
     <!-- ── SIDEBAR — Options ───────────────────────────── -->
-    <div class="report-sidebar">
-        <!-- Sidebar position toggle -->
+    <div class="report-sidebar @(_sidebarCollapsed ? "report-sidebar-collapsed" : "")">
+        <!-- Sidebar toggle bar (collapse + position) -->
         <div class="sidebar-toggle-bar">
-            <MudTooltip Text="@(_sidebarOnRight ? "Move panel to left" : "Move panel to right")">
-                <MudIconButton Icon="@(_sidebarOnRight
-                                    ? Icons.Material.Filled.KeyboardDoubleArrowLeft
-                                    : Icons.Material.Filled.KeyboardDoubleArrowRight)"
+            <MudTooltip Text="@(_sidebarCollapsed ? "Expand options panel" : "Collapse options panel")">
+                <MudIconButton Icon="@CollapseIcon"
                                Size="Size.Small"
                                Color="Color.Default"
-                               OnClick="() => _sidebarOnRight = !_sidebarOnRight" />
+                               OnClick="() => _sidebarCollapsed = !_sidebarCollapsed" />
             </MudTooltip>
+            @if (!_sidebarCollapsed)
+            {
+                <MudTooltip Text="@(_sidebarOnRight ? "Move panel to left" : "Move panel to right")">
+                    <MudIconButton Icon="@(_sidebarOnRight
+                                        ? Icons.Material.Filled.KeyboardDoubleArrowLeft
+                                        : Icons.Material.Filled.KeyboardDoubleArrowRight)"
+                                   Size="Size.Small"
+                                   Color="Color.Default"
+                                   OnClick="() => _sidebarOnRight = !_sidebarOnRight" />
+                </MudTooltip>
+            }
         </div>
 
-        @if (_isRunning)
+        @if (!_sidebarCollapsed)
         {
-            <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-1" />
+            @if (_isRunning)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-1" />
+            }
+            <OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
         }
-        <OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
     </div>
 
     <!-- ── CONTENT — Report ────────────────────────────── -->
@@ -73,6 +85,20 @@
     private bool _isRunning = false;
     private bool _hasRun = false;
     private bool _sidebarOnRight = true;
+    private bool _sidebarCollapsed = false;
+
+    /// <summary>
+    /// Chevron direction for the collapse button.
+    /// When collapsed: points inward (toward the report) so the user knows clicking expands.
+    /// When expanded: points outward (toward the edge) so the user knows clicking collapses.
+    /// </summary>
+    private string CollapseIcon => (_sidebarCollapsed, _sidebarOnRight) switch
+    {
+        (true,  true)  => Icons.Material.Filled.ChevronLeft,   // collapsed on right → expand leftward
+        (true,  false) => Icons.Material.Filled.ChevronRight,  // collapsed on left  → expand rightward
+        (false, true)  => Icons.Material.Filled.ChevronRight,  // expanded on right  → collapse rightward
+        (false, false) => Icons.Material.Filled.ChevronLeft    // expanded on left   → collapse leftward
+    };
 
     private async Task RunReport((ReportOptions Options, OptionsPanel.OutputFormat Format) args)
     {
