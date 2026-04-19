@@ -158,7 +158,7 @@
     private string? _error;
 
     private int TotalColspan =>
-        4   // Period, Dept, Basis, BudType, Amount → 5 base cols
+        5   // Period, Dept, Basis, BudType, Amount
         + (DrillDown.EntityIds.Count > 1 ? 1 : 0)
         + (DrillDown.AcctNums.Count  > 1 ? 1 : 0);
 
