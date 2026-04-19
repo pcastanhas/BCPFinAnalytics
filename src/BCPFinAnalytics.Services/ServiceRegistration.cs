@@ -70,7 +70,6 @@ public static class ServiceRegistration
         // ──────────────────────────────────────────────
         //  Report Strategies — add one entry per report
         // ──────────────────────────────────────────────
-        services.AddScoped<ITrialBalanceRepository, TrialBalanceRepository>();
         services.AddScoped<IReportStrategy, TrialBalanceStrategy>();
         services.AddScoped<ITrialBalanceDCRepository, TrialBalanceDCRepository>();
         services.AddScoped<IReportStrategy, TrialBalanceDCStrategy>();

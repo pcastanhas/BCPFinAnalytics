@@ -5,6 +5,7 @@ using BCPFinAnalytics.Common.Interfaces;
 using BCPFinAnalytics.Common.Models;
 using BCPFinAnalytics.Common.Models.Format;
 using BCPFinAnalytics.Common.Wrappers;
+using BCPFinAnalytics.DAL.Interfaces;
 using BCPFinAnalytics.Services.Format;
 using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Interfaces;
@@ -47,7 +48,7 @@ public class TrialBalanceStrategy : IReportStrategy
 {
     private readonly IFormatLoader _formatLoader;
     private readonly GlFilterBuilder _glFilterBuilder;
-    private readonly ITrialBalanceRepository _repository;
+    private readonly IGlDataRepository _glData;
     private readonly IUnpostedREService _unpostedReService;
     private readonly ILookupService _lookupService;
     private readonly ILogger<TrialBalanceStrategy> _logger;
@@ -55,8 +56,8 @@ public class TrialBalanceStrategy : IReportStrategy
     // Column ID constant — single column report
     private const string ColBalance = "BALANCE";
 
-    // Typed aggregate — replaces dynamic for compile safety
-    private sealed record AcctAggregate(string AcctName, string Type, decimal Balance, List<string> Entities);
+    // Typed aggregate — one row per account after composing the two primitives
+    private sealed record AcctAggregate(string AcctName, string Type, decimal Balance);
 
     public string ReportCode => "SIMPLETB";
     public string ReportName => "Simple Trial Balance";
@@ -64,17 +65,17 @@ public class TrialBalanceStrategy : IReportStrategy
     public TrialBalanceStrategy(
         IFormatLoader formatLoader,
         GlFilterBuilder glFilterBuilder,
-        ITrialBalanceRepository repository,
+        IGlDataRepository glData,
         IUnpostedREService unpostedReService,
         ILookupService lookupService,
         ILogger<TrialBalanceStrategy> logger)
     {
-        _formatLoader     = formatLoader;
-        _glFilterBuilder  = glFilterBuilder;
-        _repository       = repository;
+        _formatLoader      = formatLoader;
+        _glFilterBuilder   = glFilterBuilder;
+        _glData            = glData;
         _unpostedReService = unpostedReService;
-        _lookupService    = lookupService;
-        _logger           = logger;
+        _lookupService     = lookupService;
+        _logger            = logger;
     }
 
     /// <inheritdoc />
@@ -151,28 +152,55 @@ public class TrialBalanceStrategy : IReportStrategy
 
             var glParams = glParamsResult.Data!;
 
-            // ── Step 5: Execute GL query ───────────────────────────────────
+            // ── Step 5: Fetch data from primitives ────────────────────────
+            // Simple TB's balance column = balance at end of EndPeriod =
+            //   GetGlStartingBalance(EndPeriod)         — balance at end of (EndPeriod - 1)
+            // + GetGlActivity(EndPeriod, EndPeriod)     — activity in EndPeriod itself
+            //
+            // Two parallel queries, then per-account sum. The primitives
+            // handle account-type semantics internally (B/C use BALFOR anchor,
+            // I use BegYrPd), so this strategy stays simple.
             _logger.LogInformation(
-                "TrialBalanceStrategy — Executing GL query. SQL will be logged by repository.");
+                "TrialBalanceStrategy — Fetching data from GL primitives.");
 
-            var rawRows = (await _repository.GetBalancesAsync(
-                options.DbKey, glParams)).ToList();
+            var startingTask = _glData.GetGlStartingBalanceAsync(
+                options.DbKey,
+                glParams.EndPeriod,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
+
+            var activityTask = _glData.GetGlActivityAsync(
+                options.DbKey,
+                glParams.EndPeriod, glParams.EndPeriod,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
+
+            await Task.WhenAll(startingTask, activityTask);
+
+            var startingByAcct = startingTask.Result;
+            var activityByAcct = activityTask.Result;
 
             _logger.LogInformation(
-                "TrialBalanceStrategy — GL query returned {Count} raw rows.",
-                rawRows.Count);
+                "TrialBalanceStrategy — Primitives returned: " +
+                "{StartingCount} accounts with starting balance, {ActivityCount} with activity.",
+                startingByAcct.Count, activityByAcct.Count);
 
-            // ── Step 6: Aggregate across entities ─────────────────────────
-            // Sum balance across all entities per account number
-            var balanceByAcct = rawRows
-                .GroupBy(r => r.AcctNum.TrimEnd())
-                .ToDictionary(
-                    g => g.Key,
-                    g => new AcctAggregate(
-                        AcctName: g.First().AcctName,
-                        Type:     g.First().Type,
-                        Balance:  g.Sum(r => r.Balance ?? 0m),
-                        Entities: g.Select(r => r.EntityId.TrimEnd()).ToList()));
+            // ── Step 6: Compose balance per account ───────────────────────
+            // Union of account numbers from both primitives, summed.
+            // Metadata (AcctName, Type) comes from whichever primitive returned
+            // the account — both primitives source it from GACC so they agree.
+            var allAcctNums = startingByAcct.Keys.Union(activityByAcct.Keys).ToHashSet();
+
+            var balanceByAcct = allAcctNums.ToDictionary(
+                acct => acct,
+                acct =>
+                {
+                    var starting = startingByAcct.TryGetValue(acct, out var s) ? s : null;
+                    var activity = activityByAcct.TryGetValue(acct, out var a) ? a : null;
+                    var meta     = starting ?? activity!;
+                    var balance  = (starting?.Amount ?? 0m) + (activity?.Amount ?? 0m);
+                    return new AcctAggregate(meta.AcctName, meta.Type, balance);
+                });
 
             // ── Step 7: Build report column ───────────────────────────────
             var endDisplayPeriod = FiscalCalendar.ToDisplayPeriod(glParams.EndPeriod);
