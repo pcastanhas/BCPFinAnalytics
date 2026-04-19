@@ -458,8 +458,7 @@ public class Trailing12Strategy : IReportStrategy
                     PeriodFrom   = period,
                     PeriodTo     = period,
                     BasisList    = glParams.BasisList,
-                    DisplayLabel = $"{period} · {FiscalCalendar.ToDisplayPeriod(period)}",
-                    EndingBalance = amount
+                    DisplayLabel = $"{period} · {FiscalCalendar.ToDisplayPeriod(period)}"
                 };
                 cells[colId] = new CellValue(amount, drill);
             }

@@ -145,7 +145,7 @@
     {
         var parameters = new DialogParameters
         {
-            { nameof(GLDetailDialog.DrillDown), drillDown }
+            { nameof(GLDrillDownDialog.DrillDown), drillDown }
         };
 
         var options = new DialogOptions
@@ -156,7 +156,7 @@
             CloseButton       = true
         };
 
-        await DialogService.ShowAsync<GLDetailDialog>(
+        await DialogService.ShowAsync<GLDrillDownDialog>(
             "GL Detail", parameters, options);
     }
 

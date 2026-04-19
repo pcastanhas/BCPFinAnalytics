@@ -6,15 +6,15 @@ namespace BCPFinAnalytics.Services.GlDetail;
 
 /// <summary>
 /// Retrieves GL transaction detail for the drill-down modal.
-/// Wraps IGlDetailRepository and surfaces errors via ServiceResult.
+/// Wraps IGlDrillDownRepository and surfaces errors via ServiceResult.
 /// </summary>
-public interface IGlDetailService
+public interface IGlDrillDownService
 {
     /// <summary>
     /// Returns all GL detail rows for the given drill-down context.
     /// Basis expansion (A/C → also include B) is applied in the repository.
     /// </summary>
-    Task<ServiceResult<IEnumerable<GlDetailRow>>> GetDetailAsync(
+    Task<ServiceResult<IEnumerable<GlDetailRow>>> GetTransactionsAsync(
         string dbKey,
         DrillDownRef drillDown);
 }

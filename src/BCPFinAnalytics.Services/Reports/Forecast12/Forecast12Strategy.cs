@@ -508,8 +508,7 @@ public class Forecast12Strategy : IReportStrategy
                         PeriodFrom    = period,
                         PeriodTo      = period,
                         BasisList     = glParams.BasisList,
-                        DisplayLabel  = $"{FiscalCalendar.ToDisplayPeriod(period)} · Actual",
-                        EndingBalance = amount
+                        DisplayLabel  = $"{FiscalCalendar.ToDisplayPeriod(period)} · Actual"
                     };
                     cells[colId] = new CellValue(amount, actDrill);
                 }

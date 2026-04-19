@@ -42,7 +42,8 @@ public static class ServiceRegistration
         services.AddScoped<IFormatRepository, FormatRepository>();
         services.AddScoped<IBalForRepository, BalForRepository>();
         services.AddScoped<IUnpostedRERepository, UnpostedRERepository>();
-        services.AddScoped<IGlDetailRepository, GlDetailRepository>();
+        services.AddScoped<IGlDrillDownRepository, GlDrillDownRepository>();
+        services.AddScoped<IStartingBalanceRepository, StartingBalanceRepository>();
         services.AddScoped<IBudgetDetailRepository, BudgetDetailRepository>();
 
         // ──────────────────────────────────────────────
@@ -77,7 +78,8 @@ public static class ServiceRegistration
         services.AddScoped<IReportStrategy, Trailing12BudgetStrategy>();
         services.AddScoped<IForecast12Repository, Forecast12Repository>();
         services.AddScoped<IReportStrategy, Forecast12Strategy>();
-        services.AddScoped<IGlDetailService, GlDetailService>();
+        services.AddScoped<IGlDrillDownService, GlDrillDownService>();
+        services.AddScoped<IStartingBalanceService, StartingBalanceService>();
 
         // ──────────────────────────────────────────────
         //  Renderers (Scoped — stateless but scoped for logging context)

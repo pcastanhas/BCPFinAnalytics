@@ -22,21 +22,21 @@ namespace BCPFinAnalytics.DAL.Repositories;
 /// Supports consolidated reports:
 ///   AcctNums and EntityIds are both lists — Dapper IN clause handles multi-value.
 /// </summary>
-public class GlDetailRepository : IGlDetailRepository
+public class GlDrillDownRepository : IGlDrillDownRepository
 {
     private readonly IDbConnectionFactory _connectionFactory;
-    private readonly ILogger<GlDetailRepository> _logger;
+    private readonly ILogger<GlDrillDownRepository> _logger;
 
-    public GlDetailRepository(
+    public GlDrillDownRepository(
         IDbConnectionFactory connectionFactory,
-        ILogger<GlDetailRepository> logger)
+        ILogger<GlDrillDownRepository> logger)
     {
         _connectionFactory = connectionFactory;
         _logger = logger;
     }
 
     /// <inheritdoc />
-    public async Task<IEnumerable<GlDetailRow>> GetDetailAsync(
+    public async Task<IEnumerable<GlDetailRow>> GetTransactionsAsync(
         string dbKey,
         DrillDownRef drillDown)
     {
@@ -118,7 +118,7 @@ public class GlDetailRepository : IGlDetailRepository
         try
         {
             _logger.LogTrace(
-                "GlDetailRepository.GetDetailAsync — DbKey={DbKey} " +
+                "GlDrillDownRepository.GetTransactionsAsync — DbKey={DbKey} " +
                 "Entities=[{Entities}] AcctNums=[{AcctNums}] " +
                 "Period={From}-{To} Basis=[{Basis}] SQL={Sql}",
                 dbKey,
@@ -134,7 +134,7 @@ public class GlDetailRepository : IGlDetailRepository
             var result = rows.ToList();
 
             _logger.LogDebug(
-                "GlDetailRepository.GetDetailAsync — returned {Count} rows " +
+                "GlDrillDownRepository.GetTransactionsAsync — returned {Count} rows " +
                 "DbKey={DbKey} Entities=[{Entities}]",
                 result.Count, dbKey, string.Join(",", drillDown.EntityIds));
 
@@ -143,7 +143,7 @@ public class GlDetailRepository : IGlDetailRepository
         catch (Exception ex)
         {
             _logger.LogError(ex,
-                "GlDetailRepository.GetDetailAsync failed — DbKey={DbKey} " +
+                "GlDrillDownRepository.GetTransactionsAsync failed — DbKey={DbKey} " +
                 "Entities=[{Entities}] AcctNums=[{AcctNums}]",
                 dbKey,
                 string.Join(",", drillDown.EntityIds),

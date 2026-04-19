@@ -401,8 +401,7 @@ public class TrialBalanceStrategy : IReportStrategy
                                      : glParams.BegYrPd,
                 PeriodTo       = glParams.EndPeriod,
                 BasisList      = glParams.BasisList,
-                DisplayLabel   = $"{formattedAcct} · {acctData.AcctName}",
-                EndingBalance  = display  // Balance column value = ending balance
+                DisplayLabel   = $"{formattedAcct} · {acctData.AcctName}"
             };
 
             rows.Add(new ReportRow

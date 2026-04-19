@@ -2,15 +2,16 @@
 @using BCPFinAnalytics.Common.Models
 @using BCPFinAnalytics.Services.GlDetail
 @using BCPFinAnalytics.Services.Session
-@inject IGlDetailService GlDetailService
+@inject IGlDrillDownService GlDrillDownService
+@inject IStartingBalanceService StartingBalanceService
 @inject UserSessionService UserSession
 @inject ISnackbar Snackbar
 @inject BCPFinAnalytics.UI.Services.AlertService AlertSvc
-@inject ILogger<GLDetailDialog> Logger
+@inject ILogger<GLDrillDownDialog> Logger
 @inject IJSRuntime JS
 
 @*
-    GLDetailDialog — GL transaction drill-down modal.
+    GLDrillDownDialog — GL transaction drill-down modal.
     Opens when a drillable cell is clicked in ReportDisplay.
     Shows JOURNAL (open) + GHIS (closed) rows for the clicked cell context.
 
@@ -45,10 +46,7 @@
         {
             <MudAlert Severity="Severity.Info">
                 No transactions found for the selected criteria.
-                @if (DrillDown.StartingBalance.HasValue || DrillDown.EndingBalance.HasValue)
-                {
-                    <span> Balance: @FormatAmount(DrillDown.EndingBalance ?? DrillDown.StartingBalance ?? 0m)</span>
-                }
+                <span> Starting Balance: @FormatAmount(_startingBalance)</span>
             </MudAlert>
         }
         else
@@ -93,15 +91,12 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (DrillDown.StartingBalance.HasValue)
-                        {
-                            <tr class="gl-detail-balance-row">
-                                <td colspan="@(TotalColspan - 1)"><strong>Starting Balance</strong></td>
-                                <td class="amount @(DrillDown.StartingBalance.Value < 0 ? "negative" : "")">
-                                    <strong>@FormatAmount(DrillDown.StartingBalance.Value)</strong>
-                                </td>
-                            </tr>
-                        }
+                        <tr class="gl-detail-balance-row">
+                            <td colspan="@(TotalColspan - 1)"><strong>Starting Balance</strong></td>
+                            <td class="amount @(_startingBalance < 0 ? "negative" : "")">
+                                <strong>@FormatAmount(_startingBalance)</strong>
+                            </td>
+                        </tr>
                         @foreach (var row in _rows)
                         {
                             <tr class="gl-detail-row">
@@ -135,15 +130,12 @@
                                 @FormatAmount(_rows.Sum(r => r.Amt))
                             </td>
                         </tr>
-                        @if (DrillDown.EndingBalance.HasValue)
-                        {
-                            <tr class="gl-detail-balance-row gl-detail-ending">
-                                <td colspan="@(TotalColspan - 1)"><strong>Ending Balance</strong></td>
-                                <td class="amount @(DrillDown.EndingBalance.Value < 0 ? "negative" : "")">
-                                    <strong>@FormatAmount(DrillDown.EndingBalance.Value)</strong>
-                                </td>
-                            </tr>
-                        }
+                        <tr class="gl-detail-balance-row gl-detail-ending">
+                            <td colspan="@(TotalColspan - 1)"><strong>Ending Balance</strong></td>
+                            <td class="amount @(EndingBalance < 0 ? "negative" : "")">
+                                <strong>@FormatAmount(EndingBalance)</strong>
+                            </td>
+                        </tr>
                     </tfoot>
                 </table>
             </div>
@@ -174,7 +166,13 @@
     [Parameter] public DrillDownRef DrillDown { get; set; } = null!;
 
     private List<GlDetailRow> _rows = new();
+    private decimal _startingBalance = 0m;
     private bool _loading = true;
+
+    /// <summary>Ending balance = starting + sum of transaction activity.
+    /// Computed locally rather than passed in by the strategy — the dialog
+    /// is the single source of truth for drill-down math.</summary>
+    private decimal EndingBalance => _startingBalance + _rows.Sum(r => r.Amt);
 
     // Adjust colspan based on whether multi-entity/account columns are shown
     private int TotalColspan =>
@@ -192,7 +190,7 @@
         _loading = true;
 
         Logger.LogInformation(
-            "GLDetailDialog loading — DbKey={DbKey} Label={Label} " +
+            "GLDrillDownDialog loading — DbKey={DbKey} Label={Label} " +
             "Entities=[{Entities}] AcctNums=[{AcctNums}] Period={From}-{To}",
             UserSession.DbKey,
             DrillDown.DisplayLabel,
@@ -201,20 +199,45 @@
             DrillDown.PeriodFrom,
             DrillDown.PeriodTo);
 
-        var result = await GlDetailService.GetDetailAsync(UserSession.DbKey, DrillDown);
+        // Parallel: transactions + starting balance. Both queries are
+        // independent reads; waiting for them sequentially would add
+        // needless latency to every drill open.
+        var txTask = GlDrillDownService.GetTransactionsAsync(UserSession.DbKey, DrillDown);
+        var sbTask = StartingBalanceService.GetStartingBalanceAsync(UserSession.DbKey, DrillDown);
+        await Task.WhenAll(txTask, sbTask);
 
-        if (result.IsSuccess)
+        var txResult = txTask.Result;
+        var sbResult = sbTask.Result;
+
+        if (txResult.IsSuccess)
         {
-            _rows = result.Data!.ToList();
+            _rows = txResult.Data!.ToList();
             Logger.LogInformation(
-                "GLDetailDialog loaded {Count} rows — Label={Label}",
+                "GLDrillDownDialog loaded {Count} transactions — Label={Label}",
                 _rows.Count, DrillDown.DisplayLabel);
         }
         else
         {
             Logger.LogError(
-                "GLDetailDialog load failed — {Error}", result.ErrorMessage);
-            AlertSvc.AddError($"Failed to load GL detail: {result.ErrorMessage}");
+                "GLDrillDownDialog transactions load failed — {Error}", txResult.ErrorMessage);
+            AlertSvc.AddError($"Failed to load GL transactions: {txResult.ErrorMessage}");
+        }
+
+        if (sbResult.IsSuccess)
+        {
+            _startingBalance = sbResult.Data;
+            Logger.LogInformation(
+                "GLDrillDownDialog starting balance = {Balance} — Label={Label}",
+                _startingBalance, DrillDown.DisplayLabel);
+        }
+        else
+        {
+            // Starting balance failure is not fatal — transactions still render.
+            // Log and show 0; the Net Activity vs Ending Balance line will
+            // expose the missing value visually without blocking the user.
+            Logger.LogWarning(
+                "GLDrillDownDialog starting balance load failed — {Error}", sbResult.ErrorMessage);
+            _startingBalance = 0m;
         }
 
         _loading = false;
@@ -246,7 +269,7 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "GLDetailDialog Excel export failed");
+            Logger.LogError(ex, "GLDrillDownDialog Excel export failed");
             AlertSvc.AddError("Excel export failed.");
         }
         finally
@@ -280,21 +303,18 @@
             hCell.Style.Border.BottomBorder = ClosedXML.Excel.XLBorderStyleValues.Medium;
         }
 
-        // Starting balance row
+        // Starting balance row — always shown (may be 0).
         int row = 5;
-        if (DrillDown.StartingBalance.HasValue)
-        {
-            ws.Cell(row, 11).Value = "Starting Balance";
-            ws.Cell(row, 11).Style.Font.Bold = true;
-            ws.Cell(row, 11).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#DEEAF1");
-            var sb = ws.Cell(row, 12);
-            sb.Value = (double)DrillDown.StartingBalance.Value;
-            sb.Style.Font.Bold = true;
-            sb.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
-            sb.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            sb.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#DEEAF1");
-            row++;
-        }
+        ws.Cell(row, 11).Value = "Starting Balance";
+        ws.Cell(row, 11).Style.Font.Bold = true;
+        ws.Cell(row, 11).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#DEEAF1");
+        var sb = ws.Cell(row, 12);
+        sb.Value = (double)_startingBalance;
+        sb.Style.Font.Bold = true;
+        sb.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+        sb.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+        sb.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#DEEAF1");
+        row++;
 
         foreach (var r in _rows)
         {
@@ -328,20 +348,17 @@
         totalCell.Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Thin;
         row++;
 
-        // Ending balance row
-        if (DrillDown.EndingBalance.HasValue)
-        {
-            ws.Cell(row, 11).Value = "Ending Balance";
-            ws.Cell(row, 11).Style.Font.Bold = true;
-            ws.Cell(row, 11).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#BDD7EE");
-            var eb = ws.Cell(row, 12);
-            eb.Value = (double)DrillDown.EndingBalance.Value;
-            eb.Style.Font.Bold = true;
-            eb.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
-            eb.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
-            eb.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#BDD7EE");
-            eb.Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Medium;
-        }
+        // Ending balance row — always shown (computed from starting + activity).
+        ws.Cell(row, 11).Value = "Ending Balance";
+        ws.Cell(row, 11).Style.Font.Bold = true;
+        ws.Cell(row, 11).Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#BDD7EE");
+        var eb = ws.Cell(row, 12);
+        eb.Value = (double)EndingBalance;
+        eb.Style.Font.Bold = true;
+        eb.Style.NumberFormat.Format = @"#,##0.00_);(#,##0.00);""-""";
+        eb.Style.Alignment.Horizontal = ClosedXML.Excel.XLAlignmentHorizontalValues.Right;
+        eb.Style.Fill.BackgroundColor = ClosedXML.Excel.XLColor.FromHtml("#BDD7EE");
+        eb.Style.Border.TopBorder = ClosedXML.Excel.XLBorderStyleValues.Medium;
 
         // Column widths
         ws.Column(11).Width = 40;

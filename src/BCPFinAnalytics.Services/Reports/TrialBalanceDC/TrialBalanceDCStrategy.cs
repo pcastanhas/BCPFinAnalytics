@@ -38,9 +38,9 @@ public class TrialBalanceDCStrategy : IReportStrategy
     private readonly IFormatLoader _formatLoader;
     private readonly GlFilterBuilder _glFilterBuilder;
     private readonly ITrialBalanceDCRepository _repository;
+    private readonly IStartingBalanceRepository _startingBalanceRepo;
     private readonly IUnpostedREService _unpostedReService;
     private readonly ILookupService _lookupService;
-    private readonly IBalForRepository _balForRepository;
     private readonly ILogger<TrialBalanceDCStrategy> _logger;
 
     // Column ID constants
@@ -56,18 +56,18 @@ public class TrialBalanceDCStrategy : IReportStrategy
         IFormatLoader formatLoader,
         GlFilterBuilder glFilterBuilder,
         ITrialBalanceDCRepository repository,
+        IStartingBalanceRepository startingBalanceRepo,
         IUnpostedREService unpostedReService,
         ILookupService lookupService,
-        IBalForRepository balForRepository,
         ILogger<TrialBalanceDCStrategy> logger)
     {
-        _formatLoader      = formatLoader;
-        _glFilterBuilder   = glFilterBuilder;
-        _repository        = repository;
-        _unpostedReService = unpostedReService;
-        _lookupService     = lookupService;
-        _balForRepository  = balForRepository;
-        _logger            = logger;
+        _formatLoader        = formatLoader;
+        _glFilterBuilder     = glFilterBuilder;
+        _repository          = repository;
+        _startingBalanceRepo = startingBalanceRepo;
+        _unpostedReService   = unpostedReService;
+        _lookupService       = lookupService;
+        _logger              = logger;
     }
 
     /// <inheritdoc />
@@ -150,87 +150,68 @@ public class TrialBalanceDCStrategy : IReportStrategy
                 startPeriod, periodBeforeStart, glParams.EndPeriod,
                 glParams.BegYrPd, glParams.BalForPd);
 
-            // ── Step 6: Compute BalForPd anchored to PeriodBeforeStart ──────
-            // GlFilterBuilder computes BalForPd from EndPeriod — correct for the
-            // activity query. But the starting balance query needs BalForPd anchored
-            // to PeriodBeforeStart so BETWEEN BalForPd AND PeriodBeforeStart is valid.
+            // ── Step 6: Fetch starting balances via shared DAL ─────────────
+            // Replaces the previous local query. The shared repository encodes
+            // the correct four-case (account-type × is-PeriodFrom-a-balfor)
+            // matrix AND filters GLSUM.BALFOR — fixing a double-count bug in
+            // the old query for any B/C account whose window crossed a fiscal
+            // January (GLSUM has both BALFOR='B' snapshot and BALFOR='N' activity
+            // rows for the same January period, and the old query summed both).
             //
-            // Example: StartPeriod=202501, EndPeriod=202503
-            //   GlFilterBuilder BalForPd = MAX(BALFOR='B' <= 202503) = 202501
-            //   PeriodBeforeStart = 202412
-            //   Starting query with EndPeriod BalForPd: BETWEEN 202501 AND 202412 → EMPTY!
-            //   Starting query with correct BalForPd:   BETWEEN 202401 AND 202412 → OK
-            var startingBalForPd = await _balForRepository.GetBalForAnchorAsync(
+            // PeriodFrom for TBDC = StartPeriod. Per-account TYPE is resolved
+            // inside the DAL's SQL via CASE on GACC.TYPE, so this one call
+            // handles both B/C and I accounts correctly.
+            var startingByAcct = await _startingBalanceRepo.GetStartingBalancesForRangeAsync(
                 options.DbKey,
-                EntitySelectionResolver.GetRepresentativeEntity(glParams.EntityIds),
-                periodBeforeStart);
+                glParams.LedgLo,
+                glParams.LedgHi,
+                glParams.EntityIds,
+                glParams.BasisList,
+                glParams.BalForPd,
+                glParams.BegYrPd,
+                startPeriod);
 
-            var glParamsForStarting = new GlQueryParameters
-            {
-                LedgLo    = glParams.LedgLo,
-                LedgHi    = glParams.LedgHi,
-                BalForPd  = startingBalForPd,
-                BegYrPd   = glParams.BegYrPd,
-                EndPeriod = glParams.EndPeriod,
-                EntityIds = glParams.EntityIds,
-                BasisList = glParams.BasisList,
-            };
-
-            _logger.LogDebug(
-                "TrialBalanceDCStrategy — StartingBalForPd={BalFor} (anchored to PeriodBeforeStart={Before})",
-                startingBalForPd, periodBeforeStart);
-
-            // ── Step 7: Execute both queries ───────────────────────────────
-            List<TrialBalanceDCRawRow> startingRows;
-
-            if (FiscalCalendar.ComparePeriods(periodBeforeStart, startingBalForPd) < 0)
-            {
-                // PeriodBeforeStart is before any GL data — no starting balances
-                _logger.LogDebug(
-                    "TrialBalanceDCStrategy — Skipping starting balance query: " +
-                    "PeriodBeforeStart={Before} is before StartingBalForPd={BalFor}",
-                    periodBeforeStart, startingBalForPd);
-                startingRows = new List<TrialBalanceDCRawRow>();
-            }
-            else
-            {
-                startingRows = (await _repository.GetStartingBalancesAsync(
-                    options.DbKey, glParamsForStarting, periodBeforeStart)).ToList();
-            }
-
+            // Activity query unchanged — already filters BALFOR='N' correctly.
             var activityRows = (await _repository.GetActivityAsync(
                 options.DbKey, glParams, startPeriod)).ToList();
 
             _logger.LogInformation(
                 "TrialBalanceDCStrategy — Queries complete: " +
-                "StartingRows={SR} ActivityRows={AR}",
-                startingRows.Count, activityRows.Count);
+                "StartingAccounts={SA} ActivityRows={AR}",
+                startingByAcct.Count, activityRows.Count);
 
             // ── Step 7: Aggregate across entities ─────────────────────────
-            var startingByAcct = AggregateByAcct(startingRows);
+            // Activity still needs entity-aggregation from raw rows; starting
+            // balances come pre-aggregated from the shared repository.
             var activityByAcct = AggregateByAcct(activityRows);
 
-            // Build combined dictionary — union of all account numbers seen
+            // Build combined dictionary — union of all account numbers seen.
             var allAcctNums = startingByAcct.Keys
                 .Union(activityByAcct.Keys)
                 .ToHashSet();
 
-            // Seed ACCTNAME and TYPE from whichever query returned the account
+            // Seed ACCTNAME and TYPE. Activity rows provide metadata for active
+            // accounts; the starting-balance service supplies it for dormant
+            // accounts that carry a balance forward but had no period activity.
             var acctMeta = new Dictionary<string, (string AcctName, string Type)>();
-            foreach (var rows in new[] { startingRows, activityRows })
-                foreach (var r in rows)
-                {
-                    var key = r.AcctNum.TrimEnd();
-                    if (!acctMeta.ContainsKey(key))
-                        acctMeta[key] = (r.AcctName, r.Type);
-                }
+            foreach (var r in activityRows)
+            {
+                var key = r.AcctNum.TrimEnd();
+                if (!acctMeta.ContainsKey(key))
+                    acctMeta[key] = (r.AcctName, r.Type);
+            }
+            foreach (var (acct, row) in startingByAcct)
+            {
+                if (!acctMeta.ContainsKey(acct))
+                    acctMeta[acct] = (row.AcctName, row.Type);
+            }
 
             var balanceByAcct = allAcctNums.ToDictionary(
                 acct => acct,
                 acct =>
                 {
-                    var meta = acctMeta.TryGetValue(acct, out var m) ? m : (AcctName: "", Type: "");
-                    var starting = startingByAcct.TryGetValue(acct, out var sv) ? sv : 0m;
+                    var meta     = acctMeta.TryGetValue(acct, out var m) ? m : (AcctName: "", Type: "");
+                    var starting = startingByAcct.TryGetValue(acct, out var sv) ? sv.Amount : 0m;
                     var activity = activityByAcct.TryGetValue(acct, out var av) ? av : 0m;
                     return new AcctAggregate(meta.AcctName, meta.Type, starting, activity);
                 });
@@ -458,9 +439,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
                 PeriodFrom       = glParams.BegYrPd,
                 PeriodTo         = glParams.EndPeriod,
                 BasisList        = glParams.BasisList,
-                DisplayLabel     = $"{formattedAcct} · {data.AcctName}",
-                StartingBalance  = signedStarting == 0m ? null : (decimal?)signedStarting,
-                EndingBalance    = ending
+                DisplayLabel     = $"{formattedAcct} · {data.AcctName}"
             };
 
             var cells = BuildCells(

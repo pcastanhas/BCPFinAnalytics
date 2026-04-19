@@ -458,8 +458,7 @@ public class IncomeStatementStrategy : IReportStrategy
                 PeriodFrom    = startPeriod,
                 PeriodTo      = glParams.EndPeriod,
                 BasisList     = glParams.BasisList,
-                DisplayLabel  = $"{formattedAcct} · {data.AcctName} (PTD)",
-                EndingBalance = sPtdA
+                DisplayLabel  = $"{formattedAcct} · {data.AcctName} (PTD)"
             };
 
             // YTD drill-down: activity from beginning of year to end period
@@ -470,8 +469,7 @@ public class IncomeStatementStrategy : IReportStrategy
                 PeriodFrom    = glParams.BegYrPd,
                 PeriodTo      = glParams.EndPeriod,
                 BasisList     = glParams.BasisList,
-                DisplayLabel  = $"{formattedAcct} · {data.AcctName} (YTD)",
-                EndingBalance = sYtdA
+                DisplayLabel  = $"{formattedAcct} · {data.AcctName} (YTD)"
             };
 
             var cells = BuildCells(

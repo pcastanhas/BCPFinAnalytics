@@ -44,7 +44,7 @@ public readonly record struct CellValue
 
     /// <summary>
     /// Budget drill-down context. Set on PTD/YTD Budget cells in IS report.
-    /// Opens BudgetDetailDialog instead of GLDetailDialog.
+    /// Opens BudgetDetailDialog instead of GLDrillDownDialog.
     /// </summary>
     public BudgetDrillDownRef? BudgetDrillDown { get; init; }
 

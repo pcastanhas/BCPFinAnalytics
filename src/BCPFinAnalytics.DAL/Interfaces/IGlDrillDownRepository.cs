@@ -13,14 +13,14 @@ namespace BCPFinAnalytics.DAL.Interfaces;
 ///   If BasisList contains 'A' or 'C', 'B' rows are automatically included.
 ///   Applied here in the repository, not by the caller.
 /// </summary>
-public interface IGlDetailRepository
+public interface IGlDrillDownRepository
 {
     /// <summary>
     /// Returns all posted GL transactions matching the drill-down context,
     /// from both open (JOURNAL) and closed (GHIS) periods.
     /// Ordered by period, ref, item — the natural JE entry order.
     /// </summary>
-    Task<IEnumerable<GlDetailRow>> GetDetailAsync(
+    Task<IEnumerable<GlDetailRow>> GetTransactionsAsync(
         string dbKey,
         DrillDownRef drillDown);
 }

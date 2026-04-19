@@ -2,7 +2,10 @@ namespace BCPFinAnalytics.Common.Models;
 
 /// <summary>
 /// Identifies the GL transaction data behind a drillable report cell.
-/// Passed to the GL Detail modal when the user clicks a Detail row cell.
+/// Passed to <see cref="GLDrillDownDialog"/> (in the UI layer) when the
+/// user clicks a Detail row cell. The dialog fetches its own transactions
+/// and starting balance from the GL — this record only describes WHICH
+/// transactions to pull (entity + account + period + basis filters).
 ///
 /// Supports consolidated reports — AcctNums and EntityIds are both lists
 /// because a single displayed cell may aggregate multiple accounts and/or
@@ -52,22 +55,6 @@ public sealed record DrillDownRef
     ///   if list contains 'A' or 'C' → also query BASIS='B' rows.
     /// </summary>
     public IReadOnlyList<string> BasisList { get; init; } = Array.Empty<string>();
-
-    /// <summary>
-    /// Starting balance to display at the top of the modal transaction list.
-    /// For Simple TB: null (cumulative balance, no meaningful "starting" point).
-    /// For TBDC: the Starting Balance column value for this account.
-    /// For IS columns: null (income accounts have no starting balance).
-    /// </summary>
-    public decimal? StartingBalance { get; init; } = null;
-
-    /// <summary>
-    /// Ending balance to display at the bottom of the modal transaction list.
-    /// For Simple TB: the Balance column value (cumulative).
-    /// For TBDC: the Ending Balance column value.
-    /// Null if not applicable.
-    /// </summary>
-    public decimal? EndingBalance { get; init; } = null;
 
     /// <summary>
     /// Display label shown in the modal header.
