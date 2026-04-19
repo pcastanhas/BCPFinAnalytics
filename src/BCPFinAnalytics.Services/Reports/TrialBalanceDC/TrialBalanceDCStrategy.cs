@@ -37,8 +37,7 @@ public class TrialBalanceDCStrategy : IReportStrategy
 {
     private readonly IFormatLoader _formatLoader;
     private readonly GlFilterBuilder _glFilterBuilder;
-    private readonly ITrialBalanceDCRepository _repository;
-    private readonly IStartingBalanceRepository _startingBalanceRepo;
+    private readonly IGlDataRepository _glData;
     private readonly IUnpostedREService _unpostedReService;
     private readonly ILookupService _lookupService;
     private readonly ILogger<TrialBalanceDCStrategy> _logger;
@@ -55,19 +54,17 @@ public class TrialBalanceDCStrategy : IReportStrategy
     public TrialBalanceDCStrategy(
         IFormatLoader formatLoader,
         GlFilterBuilder glFilterBuilder,
-        ITrialBalanceDCRepository repository,
-        IStartingBalanceRepository startingBalanceRepo,
+        IGlDataRepository glData,
         IUnpostedREService unpostedReService,
         ILookupService lookupService,
         ILogger<TrialBalanceDCStrategy> logger)
     {
-        _formatLoader        = formatLoader;
-        _glFilterBuilder     = glFilterBuilder;
-        _repository          = repository;
-        _startingBalanceRepo = startingBalanceRepo;
-        _unpostedReService   = unpostedReService;
-        _lookupService       = lookupService;
-        _logger              = logger;
+        _formatLoader      = formatLoader;
+        _glFilterBuilder   = glFilterBuilder;
+        _glData            = glData;
+        _unpostedReService = unpostedReService;
+        _lookupService     = lookupService;
+        _logger            = logger;
     }
 
     /// <inheritdoc />
@@ -150,70 +147,58 @@ public class TrialBalanceDCStrategy : IReportStrategy
                 startPeriod, periodBeforeStart, glParams.EndPeriod,
                 glParams.BegYrPd, glParams.BalForPd);
 
-            // ── Step 6: Fetch starting balances via shared DAL ─────────────
-            // Replaces the previous local query. The shared repository encodes
-            // the correct four-case (account-type × is-PeriodFrom-a-balfor)
-            // matrix AND filters GLSUM.BALFOR — fixing a double-count bug in
-            // the old query for any B/C account whose window crossed a fiscal
-            // January (GLSUM has both BALFOR='B' snapshot and BALFOR='N' activity
-            // rows for the same January period, and the old query summed both).
+            // ── Step 6: Fetch data from primitives ────────────────────────
+            // TBDC's four columns compose from two primitives:
+            //   Starting column = GetGlStartingBalance(StartPeriod)
+            //   Debits / Credits = GetGlActivity(StartPeriod, EndPeriod) split by sign
+            //   Ending column    = Starting + (debits - credits)   (computed in strategy)
             //
-            // PeriodFrom for TBDC = StartPeriod. Per-account TYPE is resolved
-            // inside the DAL's SQL via CASE on GACC.TYPE, so this one call
-            // handles both B/C and I accounts correctly.
-            var startingByAcct = await _startingBalanceRepo.GetStartingBalancesForRangeAsync(
-                options.DbKey,
-                glParams.LedgLo,
-                glParams.LedgHi,
-                glParams.EntityIds,
-                glParams.BasisList,
-                glParams.BalForPd,
-                glParams.BegYrPd,
-                startPeriod);
+            // Two parallel queries, per-account merge below. The primitives
+            // handle BALFOR filtering and account-type (B/C vs I) anchoring
+            // internally.
+            _logger.LogInformation(
+                "TrialBalanceDCStrategy — Fetching data from GL primitives.");
 
-            // Activity query unchanged — already filters BALFOR='N' correctly.
-            var activityRows = (await _repository.GetActivityAsync(
-                options.DbKey, glParams, startPeriod)).ToList();
+            var startingTask = _glData.GetGlStartingBalanceAsync(
+                options.DbKey,
+                startPeriod,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
+
+            var activityTask = _glData.GetGlActivityAsync(
+                options.DbKey,
+                startPeriod, glParams.EndPeriod,
+                glParams.LedgLo, glParams.LedgHi,
+                glParams.EntityIds, glParams.BasisList);
+
+            await Task.WhenAll(startingTask, activityTask);
+
+            var startingByAcct = startingTask.Result;
+            var activityByAcct = activityTask.Result;
 
             _logger.LogInformation(
-                "TrialBalanceDCStrategy — Queries complete: " +
-                "StartingAccounts={SA} ActivityRows={AR}",
-                startingByAcct.Count, activityRows.Count);
+                "TrialBalanceDCStrategy — Primitives returned: " +
+                "{StartingCount} accounts with starting balance, {ActivityCount} with activity.",
+                startingByAcct.Count, activityByAcct.Count);
 
-            // ── Step 7: Aggregate across entities ─────────────────────────
-            // Activity still needs entity-aggregation from raw rows; starting
-            // balances come pre-aggregated from the shared repository.
-            var activityByAcct = AggregateByAcct(activityRows);
-
-            // Build combined dictionary — union of all account numbers seen.
-            var allAcctNums = startingByAcct.Keys
-                .Union(activityByAcct.Keys)
-                .ToHashSet();
-
-            // Seed ACCTNAME and TYPE. Activity rows provide metadata for active
-            // accounts; the starting-balance service supplies it for dormant
-            // accounts that carry a balance forward but had no period activity.
-            var acctMeta = new Dictionary<string, (string AcctName, string Type)>();
-            foreach (var r in activityRows)
-            {
-                var key = r.AcctNum.TrimEnd();
-                if (!acctMeta.ContainsKey(key))
-                    acctMeta[key] = (r.AcctName, r.Type);
-            }
-            foreach (var (acct, row) in startingByAcct)
-            {
-                if (!acctMeta.ContainsKey(acct))
-                    acctMeta[acct] = (row.AcctName, row.Type);
-            }
+            // ── Step 7: Compose per-account aggregates ────────────────────
+            // Union of account numbers from both primitives. Metadata
+            // (AcctName, Type) comes from whichever primitive returned the
+            // account — both source it from GACC so they agree.
+            var allAcctNums = startingByAcct.Keys.Union(activityByAcct.Keys).ToHashSet();
 
             var balanceByAcct = allAcctNums.ToDictionary(
                 acct => acct,
                 acct =>
                 {
-                    var meta     = acctMeta.TryGetValue(acct, out var m) ? m : (AcctName: "", Type: "");
-                    var starting = startingByAcct.TryGetValue(acct, out var sv) ? sv.Amount : 0m;
-                    var activity = activityByAcct.TryGetValue(acct, out var av) ? av : 0m;
-                    return new AcctAggregate(meta.AcctName, meta.Type, starting, activity);
+                    var starting = startingByAcct.TryGetValue(acct, out var s) ? s : null;
+                    var activity = activityByAcct.TryGetValue(acct, out var a) ? a : null;
+                    var meta     = starting ?? activity!;
+                    return new AcctAggregate(
+                        meta.AcctName,
+                        meta.Type,
+                        starting?.Amount ?? 0m,
+                        activity?.Amount ?? 0m);
                 });
 
             // ── Step 8: Build columns ──────────────────────────────────────
@@ -579,11 +564,6 @@ public class TrialBalanceDCStrategy : IReportStrategy
             return included;
         });
     }
-
-    private static Dictionary<string, decimal> AggregateByAcct(
-        IEnumerable<TrialBalanceDCRawRow> rows) =>
-        rows.GroupBy(r => r.AcctNum.TrimEnd())
-            .ToDictionary(g => g.Key, g => g.Sum(r => r.Amount ?? 0m));
 
     private static decimal ApplySign(decimal amount, FormatRow fmtRow)
     {

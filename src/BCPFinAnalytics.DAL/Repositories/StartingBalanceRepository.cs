@@ -10,7 +10,7 @@ namespace BCPFinAnalytics.DAL.Repositories;
 /// period immediately before <see cref="DrillDownRef.PeriodFrom"/>.
 ///
 /// SQL is a port of the canonical MRI starting-balance logic. It differs from
-/// the original <c>TrialBalanceDCRepository.GetStartingBalancesAsync</c> (now
+/// the original TrialBalanceDCRepository starting-balance query (now
 /// removed) in one critical way: it filters <c>GLSUM.BALFOR</c>. Without that
 /// filter, every January fiscal-year-open period double-counts (once for the
 /// BALFOR='B' snapshot row and once for the BALFOR='N' activity).
