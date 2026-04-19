@@ -115,7 +115,7 @@ public class ReportEngine : IReportEngine
             if (spec.Consolidation != ConsolidationMode.Consolidated)
                 return ServiceResult<ReportResult>.Failure(
                     "PerEntity consolidation not yet implemented in ReportEngine.",
-                    ErrorCode.InternalError);
+                    ErrorCode.UnexpectedError);
 
             var distinctSources = columns
                 .Where(c => c.Source is not null)
