@@ -242,6 +242,7 @@
 
 @code {
     [Parameter] public EventCallback<(ReportOptions Options, OutputFormat Format)> OnRunReport { get; set; }
+    [Parameter] public EventCallback OnClearReport { get; set; }
     [Parameter] public bool IsRunning { get; set; } = false;
 
     // ── Lookup data ────────────────────────────────────────
@@ -427,7 +428,7 @@
         // Handled by ButtonRow which opens the SaveSettingsModal
     }
 
-    private void OnClear()
+    private async Task OnClear()
     {
         _options        = new ReportOptions();
         _config         = ReportOptionsConfig.AllEnabled();
@@ -437,6 +438,12 @@
         _options.LedgCode = string.Empty;  // derived from entities at preflight
 
         Logger.LogDebug("OptionsPanel — options cleared");
+
+        // Bubble up so the hosting page can clear the displayed report too
+        if (OnClearReport.HasDelegate)
+        {
+            await OnClearReport.InvokeAsync();
+        }
     }
 
     /// <summary>Returns current options as SavedSettingOptions for the Save modal.</summary>

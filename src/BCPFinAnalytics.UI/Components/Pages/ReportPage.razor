@@ -48,7 +48,10 @@
             {
                 <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mb-1" />
             }
-            <OptionsPanel @ref="_optionsPanel" OnRunReport="RunReport" IsRunning="@_isRunning" />
+            <OptionsPanel @ref="_optionsPanel"
+                          OnRunReport="RunReport"
+                          OnClearReport="ClearReport"
+                          IsRunning="@_isRunning" />
         </div>
     </div>
 
@@ -99,6 +102,18 @@
         (false, false) => Icons.Material.Filled.ChevronLeft    // expanded on left   → collapse leftward
     };
 
+    /// <summary>
+    /// Invoked when the user clicks Clear in the sidebar.
+    /// OptionsPanel clears its own form fields; this clears the displayed report
+    /// so the content pane returns to the empty state.
+    /// </summary>
+    private void ClearReport()
+    {
+        _reportResult = null;
+        _hasRun = false;
+        Logger.LogDebug("ReportPage — displayed report cleared");
+    }
+
     private async Task RunReport((ReportOptions Options, OptionsPanel.OutputFormat Format) args)
     {
         var (options, format) = args;
@@ -110,8 +125,14 @@
         }
 
         _isRunning = true;
-        _reportResult = null;
-        _hasRun = false;
+        // Only reset the on-screen report when the user is running to Screen.
+        // Excel/PDF exports should leave the currently displayed report intact
+        // so the user can export, then come back and keep reviewing.
+        if (format == OptionsPanel.OutputFormat.Screen)
+        {
+            _reportResult = null;
+            _hasRun = false;
+        }
         StateHasChanged();
 
         var optionsJson = JsonSerializer.Serialize(options, new JsonSerializerOptions { WriteIndented = false });
@@ -172,7 +193,13 @@
         }
         finally
         {
-            _hasRun = true;
+            // _hasRun drives the "No data returned" vs empty-state display for Screen runs.
+            // For Excel/PDF exports we leave _hasRun as-is so the currently displayed report
+            // (if any) stays visible and an empty state stays empty.
+            if (format == OptionsPanel.OutputFormat.Screen)
+            {
+                _hasRun = true;
+            }
             _isRunning = false;
             StateHasChanged();
         }
