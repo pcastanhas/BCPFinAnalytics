@@ -24,4 +24,12 @@ public class AppSettings
     /// </summary>
     public double VarianceGreenAbove { get; set; } = 5.0;
     public double VarianceRedBelow   { get; set; } = -5.0;
+
+    /// <summary>
+    /// Ordered list of report codes controlling the Report Type dropdown order.
+    /// Codes listed here appear first, in the order given.
+    /// Registered reports not listed fall to the end of the dropdown, sorted alphabetically by name.
+    /// Unknown codes listed here are ignored.
+    /// </summary>
+    public string[] ReportOrder { get; set; } = Array.Empty<string>();
 }
