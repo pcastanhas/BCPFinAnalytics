@@ -27,6 +27,68 @@ public class Trailing12Repository : ITrailing12Repository
     }
 
     /// <inheritdoc />
+    public async Task<IEnumerable<Trailing12RawRow>> GetBudgetAsync(
+        string dbKey,
+        GlQueryParameters glParams,
+        IReadOnlyList<string> periods,
+        string budgetType)
+    {
+        const string sql = """
+            SELECT
+                RTRIM(g.ACCTNUM)   AS AcctNum,
+                RTRIM(g.ACCTNAME)  AS AcctName,
+                RTRIM(g.TYPE)      AS Type,
+                RTRIM(b.ENTITYID)  AS EntityId,
+                RTRIM(b.PERIOD)    AS Period,
+                ISNULL(SUM(b.ACTIVITY), 0) AS Amount
+            FROM GACC g
+            JOIN BUDGETS b ON b.ACCTNUM = g.ACCTNUM
+            WHERE g.ACCTNUM  >= @LedgLo
+              AND g.ACCTNUM  <  @LedgHi
+              AND b.ENTITYID IN @EntityIds
+              AND b.BUDTYPE  =  @BudgetType
+              AND b.PERIOD   IN @Periods
+            GROUP BY g.ACCTNUM, g.ACCTNAME, g.TYPE, b.ENTITYID, b.PERIOD
+            ORDER BY g.ACCTNUM, b.PERIOD
+            """;
+
+        var parameters = new
+        {
+            LedgLo     = glParams.LedgLo,
+            LedgHi     = glParams.LedgHi,
+            EntityIds  = glParams.EntityIds,
+            BudgetType = budgetType,
+            Periods    = periods.ToList()
+        };
+
+        try
+        {
+            _logger.LogTrace(
+                "Trailing12Repository.GetBudgetAsync — DbKey={DbKey} " +
+                "BudgetType={BudType} Periods=[{Periods}] Entities=[{Entities}]",
+                dbKey, budgetType,
+                string.Join(",", periods),
+                string.Join(",", glParams.EntityIds));
+
+            await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
+            var rows   = await conn.QueryAsync<Trailing12RawRow>(sql, parameters);
+            var result = rows.ToList();
+
+            _logger.LogDebug(
+                "Trailing12Repository.GetBudgetAsync — {Count} rows DbKey={DbKey}",
+                result.Count, dbKey);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex,
+                "Trailing12Repository.GetBudgetAsync failed — DbKey={DbKey}", dbKey);
+            throw;
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<IEnumerable<Trailing12RawRow>> GetActivityAsync(
         string dbKey,
         GlQueryParameters glParams,

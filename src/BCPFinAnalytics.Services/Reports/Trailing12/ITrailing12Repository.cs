@@ -19,4 +19,15 @@ public interface ITrailing12Repository
         string dbKey,
         GlQueryParameters glParams,
         IReadOnlyList<string> periods);
+
+    /// <summary>
+    /// Returns budget amounts from the BUDGETS table for the given list of periods.
+    /// Filtered by BUDTYPE = budgetType, summed across all BASIS and DEPARTMENT.
+    /// Returns one row per ACCTNUM + ENTITYID + PERIOD.
+    /// </summary>
+    Task<IEnumerable<Trailing12RawRow>> GetBudgetAsync(
+        string dbKey,
+        GlQueryParameters glParams,
+        IReadOnlyList<string> periods,
+        string budgetType);
 }

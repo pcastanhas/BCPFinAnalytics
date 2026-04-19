@@ -73,6 +73,7 @@ public static class ServiceRegistration
         services.AddScoped<IReportStrategy, IncomeStatementStrategy>();
         services.AddScoped<ITrailing12Repository, Trailing12Repository>();
         services.AddScoped<IReportStrategy, Trailing12Strategy>();
+        services.AddScoped<IReportStrategy, Trailing12BudgetStrategy>();
         services.AddScoped<IGlDetailService, GlDetailService>();
 
         // ──────────────────────────────────────────────
