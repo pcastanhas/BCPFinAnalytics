@@ -13,6 +13,7 @@ using BCPFinAnalytics.Services.Helpers;
 using BCPFinAnalytics.Services.Reports.TrialBalance;
 using BCPFinAnalytics.Services.Reports.TrialBalanceDC;
 using BCPFinAnalytics.Services.Reports.IncomeStatement;
+using BCPFinAnalytics.Services.Reports.Trailing12;
 using BCPFinAnalytics.Services.Preflight;
 using BCPFinAnalytics.Services.Settings;
 using Microsoft.Extensions.Configuration;
@@ -70,6 +71,8 @@ public static class ServiceRegistration
         services.AddScoped<IReportStrategy, TrialBalanceDCStrategy>();
         services.AddScoped<IIncomeStatementRepository, IncomeStatementRepository>();
         services.AddScoped<IReportStrategy, IncomeStatementStrategy>();
+        services.AddScoped<ITrailing12Repository, Trailing12Repository>();
+        services.AddScoped<IReportStrategy, Trailing12Strategy>();
         services.AddScoped<IGlDetailService, GlDetailService>();
 
         // ──────────────────────────────────────────────
