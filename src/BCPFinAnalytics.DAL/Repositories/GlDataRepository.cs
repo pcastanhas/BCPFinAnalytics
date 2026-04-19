@@ -43,27 +43,40 @@ public class GlDataRepository : IGlDataRepository
 
         await using var conn = await _connectionFactory.CreateConnectionAsync(dbKey);
 
-        // Representative entity for the "is period a BALFOR period" check.
-        // Using the first entity is stable; BALFOR periods align across
-        // entities in a consolidated report so this single lookup suffices.
+        // Anchor periods for this report context. We look them up relative to
+        // `period` itself (the fiscal year containing period-1):
+        //   BalForPd: most recent BALFOR='B' period on or before period — the
+        //             start of the fiscal year for B/C accounts.
+        //   BegYrPd:  month portion of BalForPd applied to the right calendar
+        //             year — the start of the fiscal year for I accounts.
         var repEntity = entityIds[0];
-        var isPeriodABalFor = await IsBalForPeriodAsync(conn, repEntity, period);
-
-        // Anchor periods for the row range.
-        var balForPd = await GetBalForAnchorAsync(conn, repEntity, period);
-        var begYrPd  = DeriveBegYrPd(balForPd, period);
+        var balForPd  = await GetBalForAnchorAsync(conn, repEntity, period);
+        var begYrPd   = DeriveBegYrPd(balForPd, period);
         var prevPeriod = PreviousPeriod(period);
 
-        // Basis expansion mirrors GlDrillDownRepository: if the caller passed
-        // A or C, also include B rows. Keeps totals reconcilable with drills.
+        // Basis expansion mirrors GlDrillDownRepository — A/C include 'B'.
         var expandedBasis = ExpandBasis(basisList);
 
-        // Single SQL encoding the four-case (account-type × is-balfor-period)
-        // matrix via CASE expressions on GACC.TYPE:
-        //   B/C account + period IS balfor  → BALFOR='B' snapshot at period
-        //   B/C account + period NOT balfor → BALFOR='B' snapshot at prior BalForPd
-        //   I  account  + period IS balfor  → sentinel '000000' (no rows)
-        //   I  account  + period NOT balfor → BALFOR='N' activity BegYrPd..prev
+        // Semantic: balance at end of (period - 1).
+        //   B/C accounts: BALFOR='B' snapshot at BalForPd + BALFOR='N' activity
+        //                 from BalForPd through (period - 1).
+        //   I   accounts: BALFOR='N' activity from BegYrPd through (period - 1).
+        //                 Income resets each fiscal year — no snapshot carried.
+        //
+        // BALFOR='B' snapshots on fiscal-year opens embed the prior year's
+        // closing balance. Including both 'B' AND 'N' rows for B/C is what
+        // makes the sum correct — the 'B' row captures everything up to the
+        // start of the current year, 'N' rows layer on the current year's
+        // activity. Ignoring BALFOR (as the old TrialBalanceRepository did)
+        // double-counted those snapshot rows.
+        //
+        // Edge case: period == BalForPd. PrevPeriod < BalForPd, so the
+        // 'N'-activity clause is suppressed (via @PrevPeriod >= @BalForPd).
+        // The 'B' snapshot clause still fires, returning just the snapshot
+        // which IS the balance at end of (BalForPd - 1).
+        //
+        // Edge case: period == BegYrPd (I account). PrevPeriod < BegYrPd,
+        // so the 'N' range is empty → account returns 0 (income reset).
         const string sql = """
             SELECT
                 RTRIM(g.ACCTNUM)  AS AcctNum,
@@ -76,40 +89,58 @@ public class GlDataRepository : IGlDataRepository
               AND g.ACCTNUM  <  @LedgHi
               AND s.ENTITYID IN @EntityIds
               AND s.BASIS    IN @Basis
-              AND s.BALFOR   =
-                  CASE WHEN g.TYPE IN ('B','C') THEN 'B' ELSE 'N' END
-              AND s.PERIOD BETWEEN
-                  CASE WHEN g.TYPE IN ('B','C') THEN @BalForPd ELSE @BegYrPd END
-                  AND
-                  CASE
-                      WHEN g.TYPE IN ('B','C') AND @IsPeriodABalFor = 1 THEN @Period
-                      WHEN g.TYPE IN ('B','C') AND @IsPeriodABalFor = 0 THEN @BalForPd
-                      WHEN g.TYPE NOT IN ('B','C') AND @IsPeriodABalFor = 1 THEN '000000'
-                      WHEN g.TYPE NOT IN ('B','C') AND @IsPeriodABalFor = 0 THEN @PrevPeriod
-                  END
+              AND (
+                  -- B/C accounts: include the BALFOR='B' snapshot row at
+                  -- BalForPd PLUS BALFOR='N' activity rows from BalForPd
+                  -- through prev. The snapshot captures everything up to the
+                  -- start of the current fiscal year; the 'N' rows layer on
+                  -- the current year's activity to date.
+                  --
+                  -- Edge case: period == BalForPd. Then PrevPeriod < BalForPd
+                  -- and we want balance at end of (BalForPd - 1), which IS
+                  -- the snapshot alone. The N activity row at BalForPd must
+                  -- NOT be included — it represents the new fiscal year's
+                  -- opening-month activity, not the prior year's close.
+                  (g.TYPE IN ('B','C') AND (
+                      -- The snapshot: always included for B/C.
+                      (s.BALFOR = 'B' AND s.PERIOD = @BalForPd)
+                      OR
+                      -- Current-year activity through prev period, but only
+                      -- when prev period is on or after the anchor (otherwise
+                      -- we'd be in the balance-at-end-of-prior-year case).
+                      (s.BALFOR = 'N'
+                       AND s.PERIOD BETWEEN @BalForPd AND @PrevPeriod
+                       AND @PrevPeriod >= @BalForPd)
+                  ))
+                  OR
+                  -- I accounts: BALFOR='N' activity only, from fiscal-year
+                  -- start through prev. Range empty if period == BegYrPd →
+                  -- returns 0 for that account (income accounts reset yearly).
+                  (g.TYPE NOT IN ('B','C')
+                   AND s.BALFOR = 'N'
+                   AND s.PERIOD BETWEEN @BegYrPd AND @PrevPeriod)
+              )
             GROUP BY g.ACCTNUM, g.ACCTNAME, g.TYPE
             """;
 
         var parameters = new
         {
-            LedgLo          = ledgLo,
-            LedgHi          = ledgHi,
-            EntityIds       = entityIds,
-            Basis           = expandedBasis,
-            BalForPd        = balForPd,
-            BegYrPd         = begYrPd,
-            Period          = period,
-            PrevPeriod      = prevPeriod,
-            IsPeriodABalFor = isPeriodABalFor ? 1 : 0
+            LedgLo     = ledgLo,
+            LedgHi     = ledgHi,
+            EntityIds  = entityIds,
+            Basis      = expandedBasis,
+            BalForPd   = balForPd,
+            BegYrPd    = begYrPd,
+            PrevPeriod = prevPeriod
         };
 
         try
         {
             _logger.LogTrace(
                 "GlDataRepository.GetGlStartingBalanceAsync — DbKey={DbKey} " +
-                "Period={Period} IsBalForPd={Is} BalForPd={BF} BegYrPd={BY} " +
+                "Period={Period} PrevPeriod={PrevPeriod} BalForPd={BF} BegYrPd={BY} " +
                 "Entities=[{E}]",
-                dbKey, period, isPeriodABalFor, balForPd, begYrPd,
+                dbKey, period, prevPeriod, balForPd, begYrPd,
                 string.Join(",", entityIds));
 
             var rows = await conn.QueryAsync<(string AcctNum, string AcctName, string Type, decimal Amount)>(
@@ -214,21 +245,6 @@ public class GlDataRepository : IGlDataRepository
     // is still used by the GL drill-down dialog for per-drill starting
     // balances. Both will be consolidated once all 5 strategies are
     // migrated onto this new surface and the old repo is deleted.
-
-    private static async Task<bool> IsBalForPeriodAsync(
-        System.Data.Common.DbConnection conn, string entityId, string period)
-    {
-        const string sql = """
-            SELECT CAST(CASE WHEN EXISTS (
-                SELECT 1 FROM PERIOD
-                WHERE ENTITYID = @EntityId
-                  AND PERIOD   = @Period
-                  AND BALFOR   = 'B'
-            ) THEN 1 ELSE 0 END AS BIT)
-            """;
-        return await conn.ExecuteScalarAsync<bool>(
-            sql, new { EntityId = entityId, Period = period });
-    }
 
     private static async Task<string> GetBalForAnchorAsync(
         System.Data.Common.DbConnection conn, string entityId, string period)
