@@ -68,7 +68,7 @@ internal static class TrialBalanceSpec
                 Source    = new DataSource.Sum(
                     new DataSource.GlStartingBalance(endPeriod),
                     new DataSource.GlActivity(endPeriod, endPeriod)),
-                Drill     = ctx =>
+                Drill     = (ctx, _) =>
                 {
                     // Detail rows (single account): branch on acct type for
                     // the drill's PeriodFrom. B/C accounts use the BAL-FOR

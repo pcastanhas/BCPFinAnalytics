@@ -576,20 +576,26 @@ public class ReportEngine : IReportEngine
             if (wholeDollars)
                 value = Math.Round(value, 0, MidpointRounding.AwayFromZero);
 
+            // If the column opts into BlankWhenZero, a computed 0 renders
+            // as a blank cell (decimal? null). Blanked cells also skip the
+            // drill factory — there's nothing to drill into.
+            var isBlank = col.BlankWhenZero && value == 0m;
+            decimal? displayAmount = isBlank ? (decimal?)null : value;
+
             CellValue cell;
-            if (col.Drill is not null)
+            if (col.Drill is not null && !isBlank)
             {
-                var drillRef = col.Drill(drillContext);
+                var drillRef = col.Drill(drillContext, value);
                 cell = drillRef switch
                 {
-                    DrillDownRef gl       => new CellValue(value, gl),
-                    BudgetDrillDownRef bd => new CellValue(value) { BudgetDrillDown = bd },
-                    _                      => new CellValue(value)
+                    DrillDownRef gl       => new CellValue(displayAmount, gl),
+                    BudgetDrillDownRef bd => new CellValue(displayAmount) { BudgetDrillDown = bd },
+                    _                      => new CellValue(displayAmount)
                 };
             }
             else
             {
-                cell = new CellValue(value);
+                cell = new CellValue(displayAmount);
             }
 
             cells[col.Id] = cell;

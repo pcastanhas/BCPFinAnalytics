@@ -18,14 +18,19 @@ public delegate decimal DerivedFn(IReadOnlyDictionary<string, decimal> accumulat
 
 /// <summary>
 /// Produces a drill-down reference for a cell given the context of the row
-/// being emitted. Returns <c>null</c> if the cell isn't clickable.
+/// being emitted AND the cell's computed (signed, pre-round) decimal value.
+/// Returns <c>null</c> if the cell isn't clickable.
+///
+/// The value parameter lets factories branch on the cell's own numeric value
+/// — e.g. TBDC attaches drill only to whichever of Debits/Credits is active
+/// (non-zero) on a given row.
 ///
 /// Return type is <c>object?</c> so a single factory type can return either
 /// a GL <c>DrillDownRef</c> or a <c>BudgetDrillDownRef</c> depending on the
 /// column's data source. The engine dispatches on the actual type when
 /// attaching the ref to the produced cell.
 /// </summary>
-public delegate object? DrillFactory(DrillContext ctx);
+public delegate object? DrillFactory(DrillContext ctx, decimal cellValue);
 
 /// <summary>
 /// Context supplied to a <see cref="DrillFactory"/> at cell-emit time. The
@@ -88,6 +93,15 @@ public sealed record ColumnSpec
     /// <c>DEBITS</c>, <c>CREDITS</c>, and <c>ENDING</c>).
     /// </summary>
     public bool Hidden { get; init; } = false;
+
+    /// <summary>
+    /// When true, a computed value of exactly 0 renders as a blank cell
+    /// instead of "0.00". Used by reports like TBDC where empty starting/
+    /// ending balances, and the unused side of Debits/Credits, should
+    /// visually disappear rather than show a zero. A blanked cell is also
+    /// not drillable — the engine skips the drill factory.
+    /// </summary>
+    public bool BlankWhenZero { get; init; } = false;
 
     /// <summary>
     /// How this column's accumulated decimal is produced — non-null for
