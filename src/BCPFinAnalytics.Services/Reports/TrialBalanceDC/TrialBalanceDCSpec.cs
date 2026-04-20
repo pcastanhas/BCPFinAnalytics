@@ -16,10 +16,13 @@ namespace BCPFinAnalytics.Services.Reports.TrialBalanceDC;
 ///   CREDITS  — Derived. -_NET when negative, else 0.
 ///   ENDING   — Derived. STARTING + _NET.
 ///
-/// All four visible columns set BlankWhenZero=true — cells with computed
-/// value 0 render as blank rather than "0.00". This matches the pre-engine
-/// strategy's visual behavior, and automatically suppresses the drill on
-/// the inactive side of the Debits/Credits split.
+/// STARTING and ENDING always render their computed value (including 0) —
+/// they represent balance positions that must always display.
+///
+/// DEBITS and CREDITS set BlankWhenZero=true — exactly one side is active
+/// per detail row; the inactive side renders blank, not "0.00". This also
+/// automatically suppresses the drill on the inactive side since the engine
+/// skips the factory call for blank cells.
 ///
 /// Drill-down:
 ///   STARTING, ENDING → no drill factory (not clickable)
@@ -95,14 +98,15 @@ internal static class TrialBalanceDCSpec
         return new[]
         {
             // Starting balance as of (StartPeriod - 1). Accumulated.
+            // Always renders a value (including 0) — starting balance is
+            // a meaningful position even when it's zero.
             new ColumnSpec
             {
-                Id            = ColStarting,
-                Header        = $"Balance at {prevDisplay}",
-                DataType      = ColumnDataType.Currency,
-                Width         = 140,
-                BlankWhenZero = true,
-                Source        = new DataSource.GlStartingBalance(startPeriod)
+                Id       = ColStarting,
+                Header   = $"Balance at {prevDisplay}",
+                DataType = ColumnDataType.Currency,
+                Width    = 140,
+                Source   = new DataSource.GlStartingBalance(startPeriod)
             },
 
             // Hidden intermediate — signed net activity for [StartPeriod,
@@ -141,15 +145,16 @@ internal static class TrialBalanceDCSpec
             },
 
             // Ending balance — Starting + Net. Not drillable (it's a computed
-            // position, not a time-bounded activity window).
+            // position, not a time-bounded activity window). Always renders
+            // a value (including 0) — ending balance is a meaningful position
+            // even when it's zero.
             new ColumnSpec
             {
-                Id            = ColEnding,
-                Header        = $"Balance at {endDisplay}",
-                DataType      = ColumnDataType.Currency,
-                Width         = 140,
-                BlankWhenZero = true,
-                Derived       = acc => acc[ColStarting] + acc[ColNet]
+                Id       = ColEnding,
+                Header   = $"Balance at {endDisplay}",
+                DataType = ColumnDataType.Currency,
+                Width    = 140,
+                Derived  = acc => acc[ColStarting] + acc[ColNet]
             }
         };
     }
